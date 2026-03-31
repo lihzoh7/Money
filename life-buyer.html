@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Life Buyer</title>
+<style>
+body{background:#001f3f;color:white;font-family:Arial;}
+.card{background:#003366;margin:10px;padding:10px;border-radius:8px;}
+.file{color:lime;cursor:pointer;}
+</style>
+</head>
+
+<body>
+
+<h2>Life Buyer</h2>
+
+<div id="list"></div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, onValue, get, update, remove, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+const app = initializeApp({
+  apiKey:"AIza...",
+  databaseURL:"https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app"
+});
+
+const db = getDatabase(app);
+const list = document.getElementById("list");
+
+onValue(ref(db,"lifeBuyer/pending"), snap=>{
+  list.innerHTML="";
+  const data = snap.val();
+  if(!data) return;
+
+  Object.entries(data).forEach(([id,p])=>{
+
+    const div=document.createElement("div");
+    div.className="card";
+
+    div.innerHTML = `
+      ${p.name} ${p.surname}<br>
+      ${p.email}<br>
+      ${p.product}<br>
+      File: <span class="file" onclick="view('${p.file}')">
+        ${p.file ? "VIEW":"NONE"}
+      </span>
+      <button onclick="approve('${id}')">APPROVE</button>
+    `;
+
+    list.appendChild(div);
+  });
+});
+
+window.view = (url)=>{
+  if(url) window.open(url);
+};
+
+window.approve = async(id)=>{
+  const snap = await get(ref(db,`lifeBuyer/pending/${id}`));
+  const p = snap.val();
+
+  const ecoRef = ref(db,`users/${p.uid}/economy`);
+
+  await update(ecoRef,{ lives:(p.lives||0)+1 });
+
+  await set(ref(db,`lifeBuyer/history/${id}`),p);
+  await remove(ref(db,`lifeBuyer/pending/${id}`));
+};
+
+</script>
+
+</body>
+</html>
