@@ -38,13 +38,19 @@ body{
 <div id="list"></div>
 
 <script>
-const API = "https://payfast-backend-475447495901.europe-west1.run.app";
 
-async function load(){
-  const res = await fetch(API + "/money/requests");
-  const data = await res.json();
+/* LOAD REQUESTS */
+function load(){
 
+  const data = JSON.parse(localStorage.getItem("walletRequests") || "[]");
+
+  const list = document.getElementById("list");
   list.innerHTML = "";
+
+  if(data.length === 0){
+    list.innerHTML = "<p>No requests</p>";
+    return;
+  }
 
   data.forEach(r=>{
     const div = document.createElement("div");
@@ -61,7 +67,7 @@ async function load(){
 
       <small>${new Date(r.timestamp).toLocaleString()}</small>
 
-      <div class="approve" onclick="approve('${r.id}')">
+      <div class="approve" onclick="approve(${r.id})">
         APPROVE
       </div>
     `;
@@ -70,17 +76,48 @@ async function load(){
   });
 }
 
-async function approve(id){
-  await fetch(API + "/money/approve",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({id})
-  });
+/* APPROVE */
+function approve(id){
+
+  let requests = JSON.parse(localStorage.getItem("walletRequests") || "[]");
+  let history = JSON.parse(localStorage.getItem("walletHistory") || "[]");
+
+  const item = requests.find(r=>r.id === id);
+
+  if(!item) return;
+
+  /* REWARD PLAYER */
+  let wallet = JSON.parse(localStorage.getItem("wallet_"+item.uid) || "{}");
+
+  if(item.item.includes("300 gems")){
+    wallet.gems = (wallet.gems || 0) + 300;
+  }
+
+  if(item.item.includes("900 gems")){
+    wallet.gems = (wallet.gems || 0) + 900;
+  }
+
+  if(item.item.includes("500 gems")){
+    wallet.gems = (wallet.gems || 0) + 500;
+    wallet.lives = (wallet.lives || 0) + 2;
+  }
+
+  localStorage.setItem("wallet_"+item.uid, JSON.stringify(wallet));
+
+  /* MOVE TO HISTORY */
+  requests = requests.filter(r=>r.id !== id);
+  history.push(item);
+
+  localStorage.setItem("walletRequests", JSON.stringify(requests));
+  localStorage.setItem("walletHistory", JSON.stringify(history));
+
+  alert("Approved & Rewarded ✅");
 
   load();
 }
 
 load();
+
 </script>
 
 </body>
