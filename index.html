@@ -1,49 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>MONEY ADMIN</title>
+<meta charset="UTF-8">
+<title>Wallet Lives Admin</title>
+
 <style>
 body{
   margin:0;
+  font-family:Arial;
   background:#001f3f;
   color:white;
   display:flex;
   justify-content:center;
   align-items:center;
   height:100vh;
-  font-family:Arial;
 }
-.grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:20px;
+
+.container{
+  width:300px;
 }
+
 .tile{
-  width:160px;
-  height:140px;
-  background:#0074D9;
-  display:flex;
-  justify-content:center;
-  align-items:center;
+  background:#003366;
+  padding:25px;
+  margin:10px 0;
+  text-align:center;
   border-radius:10px;
   cursor:pointer;
+  font-size:18px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="grid">
-  <div class="tile" onclick="go('payments.html')">PAYMENTS</div>
-  <div class="tile" onclick="go('life-buyer.html')">LIFE BUYER</div>
-  <div class="tile" onclick="go('withdrawals.html')">WITHDRAWALS</div>
+<div class="container">
+
+<div class="tile" onclick="openApprovals()">
+  LIFE APPROVALS
+</div>
+
+<div class="tile" onclick="openHistory()">
+  HISTORY
+</div>
+
 </div>
 
 <script>
-function go(p){
-  window.location.href = p;
+function openApprovals(){
+  window.location.href="wallet-admin.html";
+}
+
+function openHistory(){
+  window.location.href="wallet-admin-history.html";
 }
 </script>
 
 </body>
-  </html>
+</html>
