@@ -75,7 +75,27 @@ function load(){
     list.appendChild(div);
   });
 }
+onValue(ref(db,"walletRequests"), snap=>{
+  const data = snap.val() || {};
 
+  list.innerHTML="";
+
+  Object.keys(data).forEach(id=>{
+    const r = data[id];
+
+    const div = document.createElement("div");
+
+    div.innerHTML = `
+      ${r.name} ${r.surname}<br>
+      ${r.email}<br>
+      ${r.item} - ${r.price}<br>
+      ${new Date(r.timestamp).toLocaleString()}
+    `;
+
+    list.appendChild(div);
+  });
+});
+  
 /* APPROVE */
 function approve(id){
 
