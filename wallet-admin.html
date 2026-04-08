@@ -68,7 +68,7 @@ onValue(ref(db,"walletRequests"), snap=>{
       ${r.item} - ${r.price}<br>
       <small>${new Date(r.timestamp).toLocaleString()}</small>
 
-      <div class="approve" onclick="approve('${id}','${r.uid}','${r.item}')">
+      <div class="approve" onclick="approve('${id}','${r.uid}','${r.gems}','${r.lives}')">
         APPROVE
       </div>
     `;
