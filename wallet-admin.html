@@ -12,14 +12,12 @@ body{
   color:white;
   padding:20px;
 }
-
 .card{
   background:#1e1e1e;
   padding:15px;
   margin-bottom:10px;
   border-radius:10px;
 }
-
 .approve{
   margin-top:10px;
   padding:10px;
@@ -34,90 +32,75 @@ body{
 <body>
 
 <h2>💳 WALLET APPROVALS</h2>
-
 <div id="list"></div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, onValue, update, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIza...",
+  authDomain: "tose-ccf8f.firebaseapp.com",
+  databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "tose-ccf8f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const list = document.getElementById("list");
 
 /* LOAD REQUESTS */
-function load(){
+onValue(ref(db,"walletRequests"), snap=>{
+  const data = snap.val() || {};
+  list.innerHTML="";
 
-  const data = JSON.parse(localStorage.getItem("walletRequests") || "[]");
+  Object.keys(data).forEach(id=>{
+    const r = data[id];
 
-  const list = document.getElementById("list");
-  list.innerHTML = "";
+    if(r.status === "approved") return;
 
-  if(data.length === 0){
-    list.innerHTML = "<p>No requests</p>";
-    return;
-  }
-
-  data.forEach(r=>{
     const div = document.createElement("div");
     div.className="card";
 
     div.innerHTML = `
       <b>${r.name} ${r.surname}</b><br>
-      ${r.number}<br>
       ${r.email}<br>
-      REF: ${r.reference}<br><br>
-
-      BUYING: ${r.item}<br>
-      PRICE: ${r.price}<br>
-
+      ${r.item} - ${r.price}<br>
       <small>${new Date(r.timestamp).toLocaleString()}</small>
 
-      <div class="approve" onclick="approve(${r.id})">
+      <div class="approve" onclick="approve('${id}','${r.uid}','${r.item}')">
         APPROVE
       </div>
     `;
 
     list.appendChild(div);
   });
-  }
-  
+});
+
 /* APPROVE */
-function approve(id){
+window.approve = async function(id, uid, item){
 
-  let requests = JSON.parse(localStorage.getItem("walletRequests") || "[]");
-  let history = JSON.parse(localStorage.getItem("walletHistory") || "[]");
+  const walletRef = ref(db,"wallet/"+uid);
 
-  const item = requests.find(r=>r.id === id);
+  const snap = await get(walletRef);
+  let wallet = snap.val() || {gems:0,lives:0};
 
-  if(!item) return;
-
-  /* REWARD PLAYER */
-  let wallet = JSON.parse(localStorage.getItem("wallet_"+item.uid) || "{}");
-
-  if(item.item.includes("300 gems")){
-    wallet.gems = (wallet.gems || 0) + 300;
+  if(item.includes("300")) wallet.gems += 300;
+  if(item.includes("900")) wallet.gems += 900;
+  if(item.includes("500")){
+    wallet.gems += 500;
+    wallet.lives += 2;
   }
 
-  if(item.item.includes("900 gems")){
-    wallet.gems = (wallet.gems || 0) + 900;
-  }
+  await update(walletRef, wallet);
 
-  if(item.item.includes("500 gems")){
-    wallet.gems = (wallet.gems || 0) + 500;
-    wallet.lives = (wallet.lives || 0) + 2;
-  }
+  await update(ref(db,"walletRequests/"+id),{
+    status:"approved"
+  });
 
-  localStorage.setItem("wallet_"+item.uid, JSON.stringify(wallet));
-
-  /* MOVE TO HISTORY */
-  requests = requests.filter(r=>r.id !== id);
-  history.push(item);
-
-  localStorage.setItem("walletRequests", JSON.stringify(requests));
-  localStorage.setItem("walletHistory", JSON.stringify(history));
-
-  alert("Approved & Rewarded ✅");
-
-  load();
+  alert("Approved ✅");
 }
-
-load();
-
 </script>
 
 </body>
