@@ -90,8 +90,8 @@ window.approve = async function(id, uid, rGems, rLives){
   let wallet = snap.val() || {gems:0,lives:0};
 
   // ✅ SAFE ADD
-  wallet.gems = (wallet.gems || 0) + (rGems || 0);
-  wallet.lives = (wallet.lives || 0) + (rLives || 0);
+  wallet.gems = Number(wallet.gems || 0) + Number(rGems || 0);
+wallet.lives = Number(wallet.lives || 0) + Number(rLives || 0);
 
   await update(walletRef, wallet);
 
