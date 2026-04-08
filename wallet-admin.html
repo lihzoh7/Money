@@ -78,19 +78,16 @@ onValue(ref(db,"walletRequests"), snap=>{
 });
 
 /* APPROVE */
-window.approve = async function(id, uid, item){
+window.approve = async function(id, uid, rGems, rLives){
 
   const walletRef = ref(db,"wallet/"+uid);
 
   const snap = await get(walletRef);
   let wallet = snap.val() || {gems:0,lives:0};
 
-  if(item.includes("300")) wallet.gems += 300;
-  if(item.includes("900")) wallet.gems += 900;
-  if(item.includes("500")){
-    wallet.gems += 500;
-    wallet.lives += 2;
-  }
+  // ✅ SAFE ADD
+  wallet.gems = (wallet.gems || 0) + (rGems || 0);
+  wallet.lives = (wallet.lives || 0) + (rLives || 0);
 
   await update(walletRef, wallet);
 
@@ -99,7 +96,7 @@ window.approve = async function(id, uid, item){
   });
 
   alert("Approved ✅");
-}
+      }
 </script>
 
 </body>
