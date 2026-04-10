@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Prizes</title>
+<style>
+body{background:#111;color:white;text-align:center;}
+input{width:80px;}
+.cell{padding:10px;}
+</style>
+</head>
+
+<body>
+
+<h2>Set Weekly Prizes</h2>
+
+<div id="grid"></div>
+<button onclick="save()">SAVE</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+const app = initializeApp({ databaseURL:"https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app" });
+const db = getDatabase(app);
+
+let html="";
+
+for(let d=0;d<7;d++){
+  html+=`
+    <div class="cell">
+      Day ${d}
+      <input id="d${d}" type="number">
+    </div>
+  `;
+}
+
+document.getElementById("grid").innerHTML=html;
+
+window.save=function(){
+  let schedule={};
+
+  for(let d=0;d<7;d++){
+    schedule[d]={0:{value:parseInt(document.getElementById("d"+d).value)||0}};
+  }
+
+  set(ref(db,"admin/prizes"),{
+    fromDate:"AUTO",
+    toDate:"AUTO",
+    schedule
+  });
+
+  alert("Saved");
+}
+</script>
+</body>
+</html>
