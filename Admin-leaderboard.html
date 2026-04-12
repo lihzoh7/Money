@@ -1,62 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Admin Leaderboard</title>
+<meta charset="UTF-8">
+<title>Leaderboard Admin</title>
+
 <style>
-body{background:black;color:white;font-family:Arial;}
-.player{border-bottom:1px solid #444;padding:10px;}
+body{background:#001f3f;color:white;font-family:Arial;}
+.player{border-bottom:1px solid #444;padding:8px;}
+.menu{position:fixed;top:10px;right:10px;cursor:pointer;}
+.dropdown{display:none;background:#222;padding:10px;position:absolute;right:0;}
 </style>
 </head>
 
 <body>
 
-<h2>Players</h2>
-<button onclick="download()">DOWNLOAD DOC</button>
+<div class="menu" onclick="toggleMenu()">☰
+  <div class="dropdown" id="menu">
+    <div onclick="saveDoc()">SAVE</div>
+    <div onclick="clearData()">DELETE</div>
+  </div>
+</div>
 
+<h2 id="title"></h2>
 <div id="list"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-const app = initializeApp({ databaseURL:"https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app" });
-const db = getDatabase(app);
-
-let players=[];
-
-onValue(ref(db,"leaderboard/current"), snap=>{
-  const data = snap.val()||{};
-  players=[];
-
-  let html="";
-
-  Object.keys(data).slice(0,400).forEach((uid,i)=>{
-    let p=data[uid];
-
-    players.push(p);
-
-    html+=`
-      <div class="player">
-        ${i+1}. ${p.name || ""}<br>
-        ${p.email || ""}<br>
-        ${p.phone || ""}<br>
-        SCORE: ${p.score}
-      </div>
-    `;
-  });
-
-  document.getElementById("list").innerHTML=html;
+const app = initializeApp({
+  apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
+  databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app"
 });
 
-window.download=function(){
-  let text = players.map(p=>`${p.name} ${p.score}`).join("\n");
+const db=getDatabase(app);
 
-  let blob = new Blob([text]);
-  let a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "players.doc";
+function toggleMenu(){
+  let m=document.getElementById("menu");
+  m.style.display = m.style.display==="block"?"none":"block";
+}
+
+function saveDoc(){
+  let text=document.getElementById("list").innerText;
+  let blob=new Blob([text],{type:"application/msword"});
+  let a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="leaderboard.doc";
   a.click();
 }
+
+function clearData(){
+  set(ref(db,"leaderboard/current"),null);
+}
+
+onValue(ref(db,"leaderboard/current"),snap=>{
+  const data=snap.val()||{};
+  const list=document.getElementById("list");
+
+  list.innerHTML="";
+
+  let count=0;
+
+  for(let uid in data){
+    if(count>=400) break;
+
+    let p=data[uid];
+
+    list.innerHTML+=`
+      <div class="player">
+        <b>${p.name}</b><br>
+        ${p.email}<br>
+        ${p.phone}<br>
+        Score: ${p.score}
+      </div>
+    `;
+
+    count++;
+  }
+});
 </script>
+
 </body>
 </html>
