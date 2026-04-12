@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Wallet Admin</title>
+
+<style>
+body{
+  margin:0;
+  background:black;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+}
+
+#timer{
+  font-size:40px;
+  margin:10px;
+}
+
+#list{
+  padding:10px;
+}
+
+.card{
+  border-bottom:2px solid #444;
+  padding:15px;
+  text-align:left;
+}
+</style>
+</head>
+
+<body>
+
+<div id="timer">--:--</div>
+<div id="list"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
+  authDomain: "tose-ccf8f.firebaseapp.com",
+  databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "tose-ccf8f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* TIMER SAME AS LEADERBOARD */
+function updateTimer(){
+  let now=new Date();
+  let end=new Date();
+  end.setHours(17,30,0,0);
+  let diff=end-now;
+
+  let h=Math.floor(diff/1000/60/60);
+  let m=Math.floor((diff/1000/60)%60);
+
+  document.getElementById("timer").innerText=`${h}H:${m}M`;
+}
+setInterval(updateTimer,1000);
+
+/* LOAD DATA */
+onValue(ref(db,"leaderboard/current"), async snap=>{
+  const data=snap.val()||{};
+  let arr=[];
+
+  for(let uid in data){
+    arr.push({uid,...data[uid]});
+  }
+
+  arr.sort((a,b)=>b.score-a.score);
+
+  const list=document.getElementById("list");
+  list.innerHTML="";
+
+  for(let p of arr.slice(0,6)){
+
+    const userSnap = await get(ref(db,"users/"+p.uid));
+    const user = userSnap.val() || {};
+
+    const walletSnap = await get(ref(db,"walletDetails/"+p.uid));
+    const wallet = walletSnap.val() || {};
+
+    let div=document.createElement("div");
+    div.className="card";
+
+    div.innerHTML=`
+      <b>${user.name || ""} ${user.surname || ""}</b><br>
+      ${user.cellNumber || ""}<br><br>
+
+      BANK: ${wallet.bank || "-"}<br>
+      ACC: ${wallet.account || "-"}<br>
+      BRANCH: ${wallet.branch || "-"}<br><br>
+
+      SCORE: ${p.score}<br>
+      ${new Date(p.timestamp).toLocaleString()}
+    `;
+
+    list.appendChild(div);
+  }
+});
+</script>
+
+</body>
+</html>
