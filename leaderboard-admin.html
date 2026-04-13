@@ -6,32 +6,49 @@
 
 <style>
 body{
+  margin:0;
   background:black;
   color:white;
   font-family:Arial;
 }
 
-.section{
-  border-bottom:3px solid white;
-  margin-bottom:20px;
-  padding-bottom:10px;
+/* TIMER */
+#timer{
+  text-align:center;
+  font-size:40px;
+  padding:10px;
 }
 
-.card{
+/* LIST */
+#list{
   padding:10px;
-  border-bottom:1px solid #444;
+}
+
+/* PLAYER */
+.card{
+  padding:12px;
+  border-bottom:1px solid #333;
+}
+
+/* BREAK LINE */
+.line{
+  margin:20px 0;
+  border-top:3px solid red;
+  text-align:center;
+  padding-top:5px;
+  color:red;
 }
 </style>
 </head>
 
 <body>
 
-<h2>ADMIN LEADERBOARD</h2>
+<div id="timer">--:--</div>
 <div id="list"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getDatabase, ref, onValue, get, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
@@ -40,20 +57,69 @@ const app = initializeApp({
 
 const db = getDatabase(app);
 
+let lastDraw = null;
+
+/* ⏱ TIMER */
+function updateTimer(){
+  let now = new Date();
+  let end = new Date();
+
+  if(now.getHours() < 17){
+    end.setHours(17,30,0,0);
+  } else {
+    end.setDate(end.getDate()+1);
+    end.setHours(5,30,0,0);
+  }
+
+  let diff = end - now;
+
+  let h = Math.floor(diff/1000/60/60);
+  let m = Math.floor((diff/1000/60)%60);
+
+  document.getElementById("timer").innerText = `${h}H:${m}M`;
+}
+setInterval(updateTimer,1000);
+
+/* 🔥 DRAW LINE INSTEAD OF RESET */
+async function checkBreak(){
+  let now = new Date();
+  let h = now.getHours();
+  let m = now.getMinutes();
+
+  let isBreak =
+    (h === 5 && m === 30) ||
+    (h === 17 && m === 30);
+
+  if(!isBreak) return;
+
+  const key = `${h}:${m}`;
+
+  if(lastDraw === key) return;
+  lastDraw = key;
+
+  const snap = await get(ref(db,"leaderboard/current"));
+  const data = snap.val();
+
+  if(!data) return;
+
+  // 🔥 SAVE SNAPSHOT (DO NOT DELETE CURRENT)
+  await set(ref(db,"leaderboard/adminHistory/"+Date.now()), data);
+}
+setInterval(checkBreak,1000);
+
+/* 📊 DISPLAY ADMIN HISTORY */
 const list = document.getElementById("list");
 
-/* LOAD HISTORY */
-onValue(ref(db,"leaderboard/history"), snap=>{
+onValue(ref(db,"leaderboard/adminHistory"), snap=>{
   const data = snap.val() || {};
 
-  list.innerHTML="";
+  list.innerHTML = "";
 
-  const rounds = Object.entries(data).sort((a,b)=>b[0]-a[0]);
+  // SORT NEWEST FIRST
+  const entries = Object.entries(data)
+    .sort((a,b)=>b[0]-a[0]);
 
-  rounds.forEach(([time,players])=>{
-
-    let section = document.createElement("div");
-    section.className="section";
+  entries.forEach(([time, players])=>{
 
     let arr = [];
 
@@ -61,25 +127,31 @@ onValue(ref(db,"leaderboard/history"), snap=>{
       arr.push(players[uid]);
     }
 
-    arr.sort((a,b)=>b.score-a.score);
+    arr.sort((a,b)=>b.score - a.score);
 
+    // 🔥 TAKE ONLY TOP 6
     arr.slice(0,6).forEach(p=>{
-      let div=document.createElement("div");
-      div.className="card";
+      let div = document.createElement("div");
+      div.className = "card";
 
-      div.innerHTML=`
-        <b>${p.name}</b><br>
-        Score: ${p.score}<br>
-        ${new Date(p.timestamp).toLocaleString()}
+      div.innerHTML = `
+        <b>${p.name || "Player"}</b><br>
+        SCORE: ${p.score}<br>
+        <small>${new Date(p.timestamp).toLocaleString()}</small>
       `;
 
-      section.appendChild(div);
+      list.appendChild(div);
     });
 
-    list.appendChild(section);
+    // 🔥 DRAW LINE AFTER EACH CYCLE
+    let line = document.createElement("div");
+    line.className = "line";
+    line.innerText = "---- NEW ROUND ----";
+
+    list.appendChild(line);
   });
 });
 </script>
 
 </body>
-</html>
+  </html>
