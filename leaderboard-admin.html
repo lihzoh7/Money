@@ -5,80 +5,81 @@
 <title>Leaderboard Admin</title>
 
 <style>
-body{background:#001f3f;color:white;font-family:Arial;}
-.player{border-bottom:1px solid #444;padding:8px;}
-.menu{position:fixed;top:10px;right:10px;cursor:pointer;}
-.dropdown{display:none;background:#222;padding:10px;position:absolute;right:0;}
+body{
+  background:black;
+  color:white;
+  font-family:Arial;
+}
+
+.section{
+  border-bottom:3px solid white;
+  margin-bottom:20px;
+  padding-bottom:10px;
+}
+
+.card{
+  padding:10px;
+  border-bottom:1px solid #444;
+}
 </style>
 </head>
 
 <body>
 
-<div class="menu" onclick="toggleMenu()">☰
-  <div class="dropdown" id="menu">
-    <div onclick="saveDoc()">SAVE</div>
-    <div onclick="clearData()">DELETE</div>
-  </div>
-</div>
-
-<h2 id="title"></h2>
+<h2>ADMIN LEADERBOARD</h2>
 <div id="list"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
   databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app"
 });
 
-const db=getDatabase(app);
+const db = getDatabase(app);
 
-function toggleMenu(){
-  let m=document.getElementById("menu");
-  m.style.display = m.style.display==="block"?"none":"block";
-}
+const list = document.getElementById("list");
 
-function saveDoc(){
-  let text=document.getElementById("list").innerText;
-  let blob=new Blob([text],{type:"application/msword"});
-  let a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="leaderboard.doc";
-  a.click();
-}
-
-function clearData(){
-  set(ref(db,"leaderboard/current"),null);
-}
-
-onValue(ref(db,"leaderboard/current"),snap=>{
-  const data=snap.val()||{};
-  const list=document.getElementById("list");
+/* LOAD HISTORY */
+onValue(ref(db,"leaderboard/history"), snap=>{
+  const data = snap.val() || {};
 
   list.innerHTML="";
 
-  let count=0;
+  const rounds = Object.entries(data).sort((a,b)=>b[0]-a[0]);
 
-  for(let uid in data){
-    if(count>=400) break;
+  rounds.forEach(([time,players])=>{
 
-    let p=data[uid];
+    let section = document.createElement("div");
+    section.className="section";
 
-    list.innerHTML+=`
-      <div class="player">
+    let arr = [];
+
+    for(let uid in players){
+      arr.push(players[uid]);
+    }
+
+    arr.sort((a,b)=>b.score-a.score);
+
+    arr.slice(0,6).forEach(p=>{
+      let div=document.createElement("div");
+      div.className="card";
+
+      div.innerHTML=`
         <b>${p.name}</b><br>
-        ${p.email}<br>
-        ${p.phone}<br>
-        Score: ${p.score}
-      </div>
-    `;
+        Score: ${p.score}<br>
+        ${new Date(p.timestamp).toLocaleString()}
+      `;
 
-    count++;
-  }
+      section.appendChild(div);
+    });
+
+    list.appendChild(section);
+  });
 });
 </script>
 
 </body>
-  </html>
+</html>
