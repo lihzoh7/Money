@@ -7,25 +7,49 @@
 <style>
 body{
   margin:0;
-  background:black;
+  background:#001f3f;
   color:white;
   font-family:Arial;
+  text-align:center;
 }
 
-#list{
+/* HEADER SAME AS PLAYER */
+#date, #timer{
+  font-size:42px;
+  margin:10px;
+  font-weight:bold;
+}
+
+/* GRID SAME STYLE */
+#content{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:10px;
   padding:10px;
 }
 
+/* CARD SAME STYLE */
 .card{
-  padding:12px;
-  border-bottom:1px solid #333;
+  background:#002b55;
+  padding:10px;
+  border-radius:10px;
+  font-size:18px;
 }
 
+/* COLORS */
+.gold{ color:gold; }
+.silver{ color:silver; }
+.bronze{ color:#cd7f32; }
+.normal{ color:#ccc; }
+
+/* LINE BREAK */
 .line{
-  border-top:3px solid red;
-  margin:20px 0;
+  grid-column: span 3;
+  border-top:4px solid red;
+  margin:15px 0;
 }
 
+/* RESET BUTTON */
 #resetBtn{
   position:fixed;
   bottom:10px;
@@ -39,7 +63,11 @@ body{
 
 <body>
 
-<div id="list"></div>
+<div id="date"></div>
+<div id="timer"></div>
+
+<div id="content"></div>
+
 <div id="resetBtn">RESET / BREAK</div>
 
 <script type="module">
@@ -53,33 +81,88 @@ const app = initializeApp({
 
 const db = getDatabase(app);
 
-const list = document.getElementById("list");
+const content = document.getElementById("content");
 
-/* SHOW CURRENT TOP 6 */
-onValue(ref(db,"leaderboard/current"), snap=>{
-  const data=snap.val()||{};
-  let arr=[];
+/* DATE + TIMER (same as player) */
+function updateTime(){
+  let now = new Date();
 
-  for(let uid in data){
-    arr.push(data[uid]);
+  document.getElementById("date").innerText =
+    now.toLocaleDateString() + " " + now.toLocaleTimeString();
+
+  let end = new Date();
+
+  if(now.getHours() < 17){
+    end.setHours(17,30,0,0);
+  } else {
+    end.setDate(end.getDate()+1);
+    end.setHours(5,30,0,0);
   }
 
+  let diff = end - now;
+
+  let h = Math.floor(diff/1000/60/60);
+  let m = Math.floor((diff/1000/60)%60);
+
+  document.getElementById("timer").innerText = `${h}H:${m}M`;
+}
+setInterval(updateTime,1000);
+
+/* LOAD CURRENT + HISTORY */
+onValue(ref(db,"leaderboard"), snap=>{
+  const all = snap.val() || {};
+
+  content.innerHTML = "";
+
+  // 🔥 SHOW HISTORY FIRST (OLD ROUNDS)
+  const history = all.adminHistory || {};
+
+  Object.keys(history).sort().forEach(key=>{
+    let round = history[key];
+
+    let arr = Object.values(round);
+
+    arr.sort((a,b)=>b.score-a.score);
+
+    arr.slice(0,6).forEach((p,i)=>{
+      drawCard(p,i);
+    });
+
+    // 🔴 LINE AFTER EACH ROUND
+    let line = document.createElement("div");
+    line.className="line";
+    content.appendChild(line);
+  });
+
+  // 🔥 SHOW CURRENT ROUND
+  const current = all.current || {};
+
+  let arr = Object.values(current);
   arr.sort((a,b)=>b.score-a.score);
 
-  list.innerHTML="";
-
-  arr.slice(0,6).forEach(p=>{
-    let div=document.createElement("div");
-    div.className="card";
-
-    div.innerHTML=`
-      <b>${p.name}</b><br>
-      SCORE: ${p.score}
-    `;
-
-    list.appendChild(div);
+  arr.slice(0,6).forEach((p,i)=>{
+    drawCard(p,i);
   });
+
 });
+
+/* DRAW CARD */
+function drawCard(p,i){
+  let cls = i===0?"gold":i===1?"silver":i===2?"bronze":"normal";
+
+  let date = new Date(p.timestamp).toLocaleString();
+
+  let div=document.createElement("div");
+  div.className="card "+cls;
+
+  div.innerHTML=`
+    <b>${p.name || ""} ${p.surname || ""}</b><br>
+    SCORE: ${p.score}<br>
+    <small>${date}</small>
+  `;
+
+  content.appendChild(div);
+}
 
 /* RESET BUTTON */
 document.getElementById("resetBtn").onclick = async ()=>{
@@ -88,17 +171,12 @@ document.getElementById("resetBtn").onclick = async ()=>{
   const data = snap.val();
 
   if(data){
-    // SAVE SNAPSHOT
+    // SAVE SNAPSHOT (ADMIN SIDE ONLY)
     await set(ref(db,"leaderboard/adminHistory/"+Date.now()), data);
   }
 
-  // CLEAR PLAYER BOARD
+  // CLEAR PLAYER SIDE
   await set(ref(db,"leaderboard/current"), null);
-
-  // DRAW LINE
-  let line=document.createElement("div");
-  line.className="line";
-  list.appendChild(line);
 };
 </script>
 
