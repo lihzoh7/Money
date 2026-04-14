@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Leaderboard Admin</title>
+<title>Admin Leaderboard</title>
 
 <style>
 body{
@@ -12,43 +12,39 @@ body{
   font-family:Arial;
 }
 
-/* TIMER */
-#timer{
-  text-align:center;
-  font-size:40px;
-  padding:10px;
-}
-
-/* LIST */
 #list{
   padding:10px;
 }
 
-/* PLAYER */
 .card{
   padding:12px;
   border-bottom:1px solid #333;
 }
 
-/* BREAK LINE */
 .line{
-  margin:20px 0;
   border-top:3px solid red;
-  text-align:center;
-  padding-top:5px;
+  margin:20px 0;
+}
+
+#resetBtn{
+  position:fixed;
+  bottom:10px;
+  right:10px;
   color:red;
+  font-size:18px;
+  cursor:pointer;
 }
 </style>
 </head>
 
 <body>
 
-<div id="timer">--:--</div>
 <div id="list"></div>
+<div id="resetBtn">RESET / BREAK</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, onValue, get, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
@@ -57,101 +53,54 @@ const app = initializeApp({
 
 const db = getDatabase(app);
 
-let lastDraw = null;
+const list = document.getElementById("list");
 
-/* ⏱ TIMER */
-function updateTimer(){
-  let now = new Date();
-  let end = new Date();
+/* SHOW CURRENT TOP 6 */
+onValue(ref(db,"leaderboard/current"), snap=>{
+  const data=snap.val()||{};
+  let arr=[];
 
-  if(now.getHours() < 17){
-    end.setHours(17,30,0,0);
-  } else {
-    end.setDate(end.getDate()+1);
-    end.setHours(5,30,0,0);
+  for(let uid in data){
+    arr.push(data[uid]);
   }
 
-  let diff = end - now;
+  arr.sort((a,b)=>b.score-a.score);
 
-  let h = Math.floor(diff/1000/60/60);
-  let m = Math.floor((diff/1000/60)%60);
+  list.innerHTML="";
 
-  document.getElementById("timer").innerText = `${h}H:${m}M`;
-}
-setInterval(updateTimer,1000);
+  arr.slice(0,6).forEach(p=>{
+    let div=document.createElement("div");
+    div.className="card";
 
-/* 🔥 DRAW LINE INSTEAD OF RESET */
-async function checkBreak(){
-  let now = new Date();
-  let h = now.getHours();
-  let m = now.getMinutes();
+    div.innerHTML=`
+      <b>${p.name}</b><br>
+      SCORE: ${p.score}
+    `;
 
-  let isBreak =
-    (h === 5 && m === 30) ||
-    (h === 17 && m === 30);
+    list.appendChild(div);
+  });
+});
 
-  if(!isBreak) return;
-
-  const key = `${h}:${m}`;
-
-  if(lastDraw === key) return;
-  lastDraw = key;
+/* RESET BUTTON */
+document.getElementById("resetBtn").onclick = async ()=>{
 
   const snap = await get(ref(db,"leaderboard/current"));
   const data = snap.val();
 
-  if(!data) return;
+  if(data){
+    // SAVE SNAPSHOT
+    await set(ref(db,"leaderboard/adminHistory/"+Date.now()), data);
+  }
 
-  // 🔥 SAVE SNAPSHOT (DO NOT DELETE CURRENT)
-  await set(ref(db,"leaderboard/adminHistory/"+Date.now()), data);
-}
-setInterval(checkBreak,1000);
+  // CLEAR PLAYER BOARD
+  await set(ref(db,"leaderboard/current"), null);
 
-/* 📊 DISPLAY ADMIN HISTORY */
-const list = document.getElementById("list");
-
-onValue(ref(db,"leaderboard/adminHistory"), snap=>{
-  const data = snap.val() || {};
-
-  list.innerHTML = "";
-
-  // SORT NEWEST FIRST
-  const entries = Object.entries(data)
-    .sort((a,b)=>b[0]-a[0]);
-
-  entries.forEach(([time, players])=>{
-
-    let arr = [];
-
-    for(let uid in players){
-      arr.push(players[uid]);
-    }
-
-    arr.sort((a,b)=>b.score - a.score);
-
-    // 🔥 TAKE ONLY TOP 6
-    arr.slice(0,6).forEach(p=>{
-      let div = document.createElement("div");
-      div.className = "card";
-
-      div.innerHTML = `
-        <b>${p.name || "Player"}</b><br>
-        SCORE: ${p.score}<br>
-        <small>${new Date(p.timestamp).toLocaleString()}</small>
-      `;
-
-      list.appendChild(div);
-    });
-
-    // 🔥 DRAW LINE AFTER EACH CYCLE
-    let line = document.createElement("div");
-    line.className = "line";
-    line.innerText = "---- NEW ROUND ----";
-
-    list.appendChild(line);
-  });
-});
+  // DRAW LINE
+  let line=document.createElement("div");
+  line.className="line";
+  list.appendChild(line);
+};
 </script>
 
 </body>
-  </html>
+</html>
