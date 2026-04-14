@@ -8,17 +8,47 @@
 body{
   margin:0;
   background:black;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
   font-family:Arial;
 }
 
-/* NAVY 2:3 BOX */
+/* LOGIN POPUP */
+#loginBox{
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  background:#111;
+  padding:30px;
+  border-radius:10px;
+  text-align:center;
+  box-shadow:0 0 20px rgba(0,0,0,0.8);
+}
+
+#loginBox input{
+  display:block;
+  width:200px;
+  margin:10px auto;
+  padding:10px;
+  border:none;
+  border-radius:5px;
+}
+
+#loginBox button{
+  padding:10px 20px;
+  background:#003366;
+  color:white;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
+}
+
+/* PANEL (HIDDEN UNTIL LOGIN) */
 #panel{
+  display:none;
   width:90%;
-  height:90%;
+  height:90vh;
+  margin:auto;
+  margin-top:5vh;
   background:#001f3f;
   display:grid;
   grid-template-rows:repeat(8,1fr);
@@ -39,7 +69,6 @@ body{
   border-radius:8px;
 }
 
-/* PLUS */
 .plus{
   text-align:center;
   font-size:22px;
@@ -50,6 +79,15 @@ body{
 
 <body>
 
+<!-- LOGIN POPUP -->
+<div id="loginBox">
+  <h3>Admin Login</h3>
+  <input id="email" placeholder="Email">
+  <input id="pass" type="password" placeholder="Password">
+  <button onclick="login()">LOGIN</button>
+</div>
+
+<!-- ADMIN PANEL -->
 <div id="panel">
 
   <div class="tile" onclick="go('admin-prizes.html')">PRIZES</div>
@@ -70,11 +108,68 @@ body{
 
 </div>
 
-<script>
-function go(page){
-  location.href = page;
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
+  authDomain: "tose-ccf8f.firebaseapp.com",
+  databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "tose-ccf8f"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+/* LOGIN FUNCTION */
+window.login = async function(){
+  const email = document.getElementById("email").value;
+  const pass = document.getElementById("pass").value;
+
+  try{
+    const userCred = await signInWithEmailAndPassword(auth, email, pass);
+    const uid = userCred.user.uid;
+
+    // CHECK ADMIN ROLE
+    const snap = await get(ref(db, "admins/" + uid));
+
+    if(snap.exists()){
+      showPanel();
+    } else {
+      alert("Not admin ❌");
+      auth.signOut();
+    }
+
+  }catch(e){
+    alert("Login failed ❌");
+    console.log(e);
+  }
+};
+
+/* AUTO CHECK SESSION */
+onAuthStateChanged(auth, async (user)=>{
+  if(user){
+    const snap = await get(ref(db, "admins/" + user.uid));
+    if(snap.exists()){
+      showPanel();
+    }
+  }
+});
+
+/* SHOW PANEL */
+function showPanel(){
+  document.getElementById("loginBox").style.display = "none";
+  document.getElementById("panel").style.display = "grid";
 }
+
+/* NAVIGATION */
+window.go = function(page){
+  location.href = page;
+};
 </script>
 
 </body>
-    </html>
+  </html>
