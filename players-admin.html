@@ -25,24 +25,10 @@ body{
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-const auth = getAuth();
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    location.href = "admin.html";
-    return;
-  }
-
-  const snap = await get(ref(db, "admins/" + user.uid));
-
-  if (!snap.exists()) {
-    location.href = "admin.html";
-  }
-});
-const firebaseConfig = {
+  const firebaseConfig = {
   apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
   authDomain: "tose-ccf8f.firebaseapp.com",
   databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
@@ -51,28 +37,31 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
+
+onAuthStateChanged(auth, async (user)=>{
+  if(!user) return location.href="admin.html";
+
+  const snap = await get(ref(db,"admins/"+user.uid));
+  if(!snap.exists()) location.href="admin.html";
+});
 
 onValue(ref(db,"users"), snap=>{
   const data=snap.val()||{};
-  const list=document.getElementById("list");
   list.innerHTML="";
 
-  for(let uid in data){
-    let u=data[uid];
-
+  Object.values(data).forEach(u=>{
     let div=document.createElement("div");
     div.className="card";
-
     div.innerHTML=`
-      ${u.name || ""} ${u.surname || ""}<br>
-      ${u.email || ""}<br>
-      ${u.cellNumber || ""}
+      ${u.name||""} ${u.surname||""}<br>
+      ${u.email||""}<br>
+      ${u.cellNumber||""}
     `;
-
     list.appendChild(div);
-  }
+  });
 });
-</script>
+    </script>
 
 </body>
 </html>
