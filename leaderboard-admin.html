@@ -191,8 +191,7 @@ document.getElementById("resetBtn").onclick = async ()=>{
   }
 
   // CLEAR PLAYER SIDE
-  await set(ref(db,"leaderboard/current"), null);
-};
+  await set(ref(db,"leaderboard/current"), {});
 </script>
 
 </body>
