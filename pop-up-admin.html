@@ -37,112 +37,105 @@ body{
 <body>
 
 <h2>📋 POP UP APPLICATIONS</h2>
-<div id="list"></div>
+<div id="list">Loading...</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getDatabase, ref, onValue, remove, set, update, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-/* ✅ INIT FIRST */
-const firebaseConfig = {
+/* INIT */
+const app = initializeApp({
   apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
   authDomain: "tose-ccf8f.firebaseapp.com",
   databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "tose-ccf8f",
-  storageBucket: "tose-ccf8f.appspot.com",
-  messagingSenderId: "475447495901",
-  appId: "1:475447495901:web:9189276a162a3680afdf34"
-};
+  projectId: "tose-ccf8f"
+});
 
-const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
-
 const list = document.getElementById("list");
 
-/* 🔐 AUTH CHECK */
+/* 🔐 WAIT FOR AUTH FIRST */
 onAuthStateChanged(auth, async (user) => {
+
   if (!user) {
-    location.href = "admin.html";
+    list.innerHTML = "Not logged in ❌";
+    setTimeout(()=> location.href="admin.html",1000);
     return;
   }
 
   const snap = await get(ref(db, "admins/" + user.uid));
 
   if (!snap.exists()) {
-    location.href = "admin.html";
-  }
-});
-
-/* 📥 LOAD APPLICATIONS */
-onValue(ref(db,"applications"), snap=>{
-  const data = snap.val() || {};
-  list.innerHTML="";
-
-  const keys = Object.keys(data).reverse(); // newest first
-
-  if(keys.length === 0){
-    list.innerHTML = `<div class="empty">No applications</div>`;
+    list.innerHTML = "Not admin ❌";
+    setTimeout(()=> location.href="admin.html",1000);
     return;
   }
 
-  keys.forEach(uid=>{
-    const r = data[uid];
-
-    const div = document.createElement("div");
-    div.className="card";
-
-    div.innerHTML = `
-      <b>${r.name || ""} ${r.surname || ""}</b><br>
-      📞 ${r.number || ""}<br>
-      🎂 ${r.age || ""}<br>
-      🔗 ${r.referral || "None"}<br>
-      <small>${new Date(r.timestamp).toLocaleString()}</small>
-
-      <div class="approve" onclick="approve('${uid}')">
-        GRANT ✅
-      </div>
-    `;
-
-    list.appendChild(div);
-  });
+  loadApplications(); // ✅ ONLY LOAD AFTER AUTH OK
 });
 
-/* ✅ APPROVE */
-window.approve = async function(uid){
+/* LOAD APPLICATIONS */
+function loadApplications(){
+  onValue(ref(db,"applications"), snap=>{
+    const data = snap.val() || {};
+    list.innerHTML="";
 
-  try{
-    const now = Date.now();
+    const keys = Object.keys(data).reverse();
 
-    const snap = await get(ref(db,"applications/"+uid));
-    const data = snap.val();
-
-    if(!data){
-      alert("Application not found ❌");
+    if(keys.length === 0){
+      list.innerHTML = `<div class="empty">No applications</div>`;
       return;
     }
 
-    // MOVE TO HISTORY
-    await set(ref(db,"applicationsHistory/"+uid),{
-      ...data,
-      approvedAt: now
+    keys.forEach(uid=>{
+      const r = data[uid];
+
+      const div = document.createElement("div");
+      div.className="card";
+
+      div.innerHTML = `
+        <b>${r.name || ""} ${r.surname || ""}</b><br>
+        📞 ${r.number || ""}<br>
+        🎂 ${r.age || ""}<br>
+        🔗 ${r.referral || "None"}<br>
+        <small>${new Date(r.timestamp).toLocaleString()}</small>
+
+        <div class="approve" onclick="approve('${uid}')">
+          GRANT ✅
+        </div>
+      `;
+
+      list.appendChild(div);
     });
+  });
+}
 
-    // APPROVE USER
-    await update(ref(db,"users/"+uid),{
-      approved:true
-    });
+/* APPROVE */
+window.approve = async function(uid){
+  const now = Date.now();
 
-    // REMOVE FROM PENDING
-    await remove(ref(db,"applications/"+uid));
+  const snap = await get(ref(db,"applications/"+uid));
+  const data = snap.val();
 
-    alert("User Approved ✅");
-
-  }catch(e){
-    console.error(e);
-    alert("Error ❌");
+  if(!data){
+    alert("Not found ❌");
+    return;
   }
+
+  await set(ref(db,"applicationsHistory/"+uid),{
+    ...data,
+    approvedAt: now
+  });
+
+  await update(ref(db,"users/"+uid),{
+    approved:true
+  });
+
+  await remove(ref(db,"applications/"+uid));
+
+  alert("Approved ✅");
 };
 </script>
 
