@@ -120,20 +120,19 @@ const firebaseConfig = {
   projectId: "tose-ccf8f"
 };
 
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-/* LOGIN FUNCTION */
 window.login = async function(){
-  const email = document.getElementById("email").value;
-  const pass = document.getElementById("pass").value;
+  const email = email.value;
+  const pass = pass.value;
 
   try{
     const userCred = await signInWithEmailAndPassword(auth, email, pass);
     const uid = userCred.user.uid;
 
-    // CHECK ADMIN ROLE
     const snap = await get(ref(db, "admins/" + uid));
 
     if(snap.exists()){
@@ -142,34 +141,25 @@ window.login = async function(){
       alert("Not admin ❌");
       auth.signOut();
     }
-
   }catch(e){
     alert("Login failed ❌");
-    console.log(e);
   }
 };
 
-/* AUTO CHECK SESSION */
 onAuthStateChanged(auth, async (user)=>{
   if(user){
     const snap = await get(ref(db, "admins/" + user.uid));
-    if(snap.exists()){
-      showPanel();
-    }
+    if(snap.exists()) showPanel();
   }
 });
 
-/* SHOW PANEL */
 function showPanel(){
-  document.getElementById("loginBox").style.display = "none";
-  document.getElementById("panel").style.display = "grid";
+  loginBox.style.display="none";
+  panel.style.display="grid";
 }
 
-/* NAVIGATION */
-window.go = function(page){
-  location.href = page;
-};
-</script>
+window.go = (p)=>location.href=p;
+  </script>
 
 </body>
   </html>
