@@ -34,101 +34,67 @@ body{
 <h2>📋 POP UP APPLICATIONS</h2>
 <div id="list"></div>
 
-<script type="module">
+  <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, onValue, remove, set, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getDatabase, ref, onValue, remove, set, update, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-const auth = getAuth();
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    location.href = "admin.html";
-    return;
-  }
-
-  const snap = await get(ref(db, "admins/" + user.uid));
-
-  if (!snap.exists()) {
-    location.href = "admin.html";
-  }
-});
-const firebaseConfig = {
+    const firebaseConfig = {
   apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
   authDomain: "tose-ccf8f.firebaseapp.com",
   databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "tose-ccf8f",
-  storageBucket: "tose-ccf8f.appspot.com",
-  messagingSenderId: "475447495901",
-  appId: "1:475447495901:web:9189276a162a3680afdf34"
+  projectId: "tose-ccf8f"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
 
-const list = document.getElementById("list");
+onAuthStateChanged(auth, async user=>{
+  if(!user) return location.href="admin.html";
 
-/* LOAD APPLICATIONS */
+  const snap = await get(ref(db,"admins/"+user.uid));
+  if(!snap.exists()) location.href="admin.html";
+});
+
 onValue(ref(db,"applications"), snap=>{
-  const data = snap.val() || {};
+  const data=snap.val()||{};
   list.innerHTML="";
 
-  Object.keys(data).forEach(uid=>{
-    const r = data[uid];
-
-    const div = document.createElement("div");
+  Object.entries(data).forEach(([uid,r])=>{
+    let div=document.createElement("div");
     div.className="card";
 
-    div.innerHTML = `
+    div.innerHTML=`
       <b>${r.name} ${r.surname}</b><br>
-      📞 ${r.number}<br>
-      🎂 ${r.age}<br>
-      🔗 ${r.referral || "None"}<br>
+      ${r.number}<br>
+      ${r.age}<br>
+      ${r.referral||"None"}<br>
       <small>${new Date(r.timestamp).toLocaleString()}</small>
-
-      <div class="approve" onclick="approve('${uid}')">
-        GRANT ✅
-      </div>
+      <div class="approve" onclick="approve('${uid}')">GRANT ✅</div>
     `;
 
     list.appendChild(div);
   });
 });
 
-/* APPROVE */
-window.approve = async function(uid){
+window.approve = async(uid)=>{
+  const snap = await get(ref(db,"applications/"+uid));
+  const data = snap.val();
 
-  const now = Date.now();
+  if(!data) return;
 
-  const appRef = ref(db,"applications/"+uid);
-
-  // GET DATA FIRST
-  const snap = await fetchData(uid);
-  const data = snap;
-
-  // MOVE TO HISTORY
   await set(ref(db,"applicationsHistory/"+uid),{
     ...data,
-    approvedAt: now
+    approvedAt:Date.now()
   });
 
-  // SET USER APPROVED
-  await update(ref(db,"users/"+uid),{
-    approved:true
-  });
+  await update(ref(db,"users/"+uid),{ approved:true });
 
-  // REMOVE FROM PENDING
-  await remove(appRef);
+  await remove(ref(db,"applications/"+uid));
 
-  alert("User Approved ✅");
+  alert("Approved ✅");
 };
-
-async function fetchData(uid){
-  const res = await fetch(`https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app/applications/${uid}.json`);
-  return await res.json();
-}
-
-</script>
-
+  </script>
 </body>
 </html>
