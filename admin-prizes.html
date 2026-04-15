@@ -23,22 +23,7 @@ body{background:navy;color:white;font-family:Arial;}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-const auth = getAuth();
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    location.href = "admin.html";
-    return;
-  }
-
-  const snap = await get(ref(db, "admins/" + user.uid));
-
-  if (!snap.exists()) {
-    location.href = "admin.html";
-  }
-});
 const app = initializeApp({
   apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
   databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app"
