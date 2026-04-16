@@ -167,16 +167,31 @@ function drawCard(p,i){
 /* RESET BUTTON */
 document.getElementById("resetBtn").onclick = async ()=>{
 
+  // 🔐 ADMIN CHECK (ADD THIS PART)
+  const uid = auth.currentUser?.uid;
+
+  if(!uid){
+    alert("Not logged in ❌");
+    return;
+  }
+
+  const adminSnap = await get(ref(db,"admins/"+uid));
+
+  if(!adminSnap.exists()){
+    alert("Not admin ❌");
+    return;
+  }
+
+  // 🔥 YOUR ORIGINAL CODE (KEEP THIS)
   const snap = await get(ref(db,"leaderboard/current"));
   const data = snap.val();
 
   if(data){
-    // SAVE SNAPSHOT (ADMIN SIDE ONLY)
     await set(ref(db,"leaderboard/adminHistory/"+Date.now()), data);
   }
 
-  // CLEAR PLAYER SIDE
   await set(ref(db,"leaderboard/current"), null);
+
 };
 </script>
 
