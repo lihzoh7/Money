@@ -62,8 +62,21 @@ const auth = getAuth(app);
 const list = document.getElementById("list");
 
 /* 🔐 AUTH CHECK */
+onAuthStateChanged(auth, async (user) => {
 
+  if (!user) {
+    location.href = "admin.html";
+    return;
+  }
 
+  const snap = await get(ref(db, "admins/" + user.uid));
+
+  if (!snap.exists()) {
+    location.href = "admin.html";
+  }
+
+});
+  
 /* 📥 LOAD APPLICATIONS */
 onValue(ref(db,"applications"), snap=>{
   const data = snap.val() || {};
