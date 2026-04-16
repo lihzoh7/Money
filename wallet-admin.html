@@ -63,16 +63,15 @@ const list = document.getElementById("list");
 
 /* 🔐 AUTH CHECK */
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    location.href = "admin.html";
-    return;
-  }
+
+  if (!user) return; // ⛔ DON'T redirect immediately
 
   const snap = await get(ref(db, "admins/" + user.uid));
 
   if (!snap.exists()) {
     location.href = "admin.html";
   }
+
 });
 
 /* 📥 LOAD REQUESTS */
