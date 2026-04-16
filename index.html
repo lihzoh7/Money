@@ -42,7 +42,13 @@ body{
   cursor:pointer;
 }
 
-/* PANEL (HIDDEN UNTIL LOGIN) */
+#status{
+  margin-top:10px;
+  font-size:14px;
+  color:orange;
+}
+
+/* PANEL */
 #panel{
   display:none;
   width:90%;
@@ -57,7 +63,6 @@ body{
   box-sizing:border-box;
 }
 
-/* TILE */
 .tile{
   background:#003366;
   display:flex;
@@ -79,15 +84,16 @@ body{
 
 <body>
 
-<!-- LOGIN POPUP -->
+<!-- LOGIN -->
 <div id="loginBox">
   <h3>Admin Login</h3>
   <input id="email" placeholder="Email">
   <input id="pass" type="password" placeholder="Password">
-  <button onclick="login()">LOGIN</button>
+  <button id="loginBtn">LOGIN</button>
+  <div id="status"></div>
 </div>
 
-<!-- ADMIN PANEL -->
+<!-- PANEL -->
 <div id="panel">
 
   <div class="tile" onclick="go('admin-prizes.html')">PRIZES</div>
@@ -110,9 +116,20 @@ body{
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
+import { 
+  getDatabase, 
+  ref, 
+  get 
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+/* INIT */
 const firebaseConfig = {
   apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
   authDomain: "tose-ccf8f.firebaseapp.com",
@@ -120,14 +137,30 @@ const firebaseConfig = {
   projectId: "tose-ccf8f"
 };
 
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-window.login = async function(){
-  const email = email.value;
-  const pass = pass.value;
+/* ELEMENTS */
+const emailEl = document.getElementById("email");
+const passEl = document.getElementById("pass");
+const statusEl = document.getElementById("status");
+const loginBtn = document.getElementById("loginBtn");
+
+/* LOGIN BUTTON */
+loginBtn.addEventListener("click", login);
+
+async function login(){
+
+  const email = emailEl.value.trim();
+  const pass = passEl.value;
+
+  if(!email || !pass){
+    statusEl.innerText = "Enter email & password";
+    return;
+  }
+
+  statusEl.innerText = "Logging in...";
 
   try{
     const userCred = await signInWithEmailAndPassword(auth, email, pass);
@@ -136,30 +169,40 @@ window.login = async function(){
     const snap = await get(ref(db, "admins/" + uid));
 
     if(snap.exists()){
+      statusEl.innerText = "Success ✅";
       showPanel();
     } else {
-      alert("Not admin ❌");
-      auth.signOut();
+      statusEl.innerText = "Not admin ❌";
+      await signOut(auth);
     }
-  }catch(e){
-    alert("Login failed ❌");
-  }
-};
 
+  }catch(e){
+    console.error(e);
+    statusEl.innerText = "Login failed ❌";
+  }
+}
+
+/* AUTO LOGIN CHECK */
 onAuthStateChanged(auth, async (user)=>{
-  if(user){
-    const snap = await get(ref(db, "admins/" + user.uid));
-    if(snap.exists()) showPanel();
+  if(!user) return;
+
+  const snap = await get(ref(db, "admins/" + user.uid));
+
+  if(snap.exists()){
+    showPanel();
   }
 });
 
+/* SHOW PANEL */
 function showPanel(){
-  loginBox.style.display="none";
-  panel.style.display="grid";
+  document.getElementById("loginBox").style.display="none";
+  document.getElementById("panel").style.display="grid";
 }
 
+/* NAVIGATION */
 window.go = (p)=>location.href=p;
-  </script>
+
+</script>
 
 </body>
   </html>
