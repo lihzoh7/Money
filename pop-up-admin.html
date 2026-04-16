@@ -41,18 +41,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 
 const auth = getAuth();
 
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    location.href = "admin.html";
-    return;
-  }
 
-  const snap = await get(ref(db, "admins/" + user.uid));
-
-  if (!snap.exists()) {
-    location.href = "admin.html";
-  }
-});
 const firebaseConfig = {
   apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
   authDomain: "tose-ccf8f.firebaseapp.com",
