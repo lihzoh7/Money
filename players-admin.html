@@ -39,7 +39,19 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    location.href = "admin.html";
+    return;
+  }
 
+  const snap = await get(ref(db, "admins/" + user.uid));
+
+  if (!snap.exists()) {
+    alert("Not admin ❌");
+    location.href = "admin.html";
+  }
+});
 
 onValue(ref(db,"users"), snap=>{
   const data=snap.val()||{};
