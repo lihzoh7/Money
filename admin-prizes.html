@@ -23,7 +23,8 @@ body{background:navy;color:white;font-family:Arial;}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-
+import { update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+  
 const app = initializeApp({
   apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
   databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app"
@@ -61,9 +62,9 @@ function render(data){
       div.onclick=()=>{
         let v=prompt("Enter amount:",val);
         if(v!==null){
-          set(ref(db,`admin/prizes/schedule/${d}/${r}`),{
-            value:parseInt(v)
-          });
+          update(ref(db, `admin/prizes/schedule/${d}/${r}`), {
+  value: parseInt(v)
+});
         }
       };
 
