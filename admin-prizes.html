@@ -76,7 +76,7 @@ function render(data){
 onValue(ref(db,"admin/prizes"),snap=>{
   let data=snap.val()||{};
 
-  let week=getWeek();
+  const week = getWeek();
 set(ref(db,"admin/prizes/fromDate"), week.from);
 set(ref(db,"admin/prizes/toDate"), week.to);
   
