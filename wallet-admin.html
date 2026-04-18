@@ -124,13 +124,17 @@ onValue(ref(db,"walletRequests"), snap=>{
 /* ✅ APPROVE FUNCTION */
 window.approve = async function(id, uid, rGems, rLives){
 
+  if (!currentUser) {
+    alert("Auth not ready yet");
+    return;
+  }
+
   try{
     const walletRef = ref(db,"wallet/"+uid);
 
     const snap = await get(walletRef);
     let wallet = snap.val() || {gems:0,lives:0};
 
-    // 🔥 SAFE ADD
     wallet.gems = Number(wallet.gems || 0) + Number(rGems || 0);
     wallet.lives = Number(wallet.lives || 0) + Number(rLives || 0);
 
