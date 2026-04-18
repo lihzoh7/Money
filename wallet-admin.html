@@ -62,14 +62,23 @@ const auth = getAuth(app);
 const list = document.getElementById("list");
 
 /* 🔐 AUTH CHECK */
+let currentUser = null;
+
 onAuthStateChanged(auth, async (user) => {
 
-  if (!user) return; // ⛔ DON'T redirect immediately
+  if (!user) {
+    location.href = "index.html";
+    return;
+  }
+
+  currentUser = user; // ✅ STORE USER
 
   const snap = await get(ref(db, "admins/" + user.uid));
 
   if (!snap.exists()) {
-    location.href = "admin.html";
+    alert("Not admin");
+    location.href = "index.html";
+    return;
   }
 
 });
