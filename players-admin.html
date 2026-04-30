@@ -50,24 +50,27 @@ onAuthStateChanged(auth, async (user) => {
   if (!snap.exists()) {
     alert("Not admin ❌");
     location.href = "admin.html";
+    return;
   }
-});
 
-onValue(ref(db,"users"), snap=>{
-  const data=snap.val()||{};
-  list.innerHTML="";
+  // ✅ ONLY LOAD USERS AFTER AUTH + ADMIN CHECK
+  onValue(ref(db,"users"), snap=>{
+    const data = snap.val() || {};
+    list.innerHTML = "";
 
-  Object.values(data).forEach(u=>{
-    let div=document.createElement("div");
-    div.className="card";
-    div.innerHTML=`
-      ${u.name||""} ${u.surname||""}<br>
-      ${u.email||""}<br>
-      ${u.cellNumber||""}
-    `;
-    list.appendChild(div);
+    Object.values(data).forEach(u=>{
+      let div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = `
+        ${u.name||""} ${u.surname||""}<br>
+        ${u.email||""}<br>
+        ${u.cellNumber||""}
+      `;
+      list.appendChild(div);
+    });
   });
 });
+
     </script>
 
 </body>
