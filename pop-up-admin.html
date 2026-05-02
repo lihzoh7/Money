@@ -1,152 +1,140 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Pop Up Admin</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPACE GLASS - Admin Panel</title>
+    <style>
+        body { background-color: #2c003e; font-family: 'Segoe UI', Arial, sans-serif; color: white; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid green; padding-bottom: 10px; margin-bottom: 20px; }
+        
+        #actionBtn { 
+            background-color: green; color: white; border: none; padding: 10px 20px; 
+            border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s;
+        }
+        #actionBtn.delete-mode { background-color: #cc0000; }
 
-<style>
-body{
-  margin:0;
-  font-family:Arial;
-  background:#111;
-  color:white;
-  padding:20px;
-}
-.card{
-  background:#1e1e1e;
-  padding:15px;
-  margin-bottom:10px;
-  border-radius:10px;
-}
-.approve{
-  margin-top:10px;
-  padding:10px;
-  background:green;
-  text-align:center;
-  cursor:pointer;
-  border-radius:6px;
-}
-.empty{
-  text-align:center;
-  margin-top:50px;
-  color:#777;
-}
-</style>
+        .query-card { 
+            background-color: #4b0082; padding: 15px; margin-bottom: 15px; 
+            border-radius: 8px; border-left: 5px solid green; cursor: pointer;
+            transition: background 0.2s; position: relative;
+        }
+        .query-card.selected { background-color: #666666 !important; border-left-color: #fff; }
+        
+        .field { margin-bottom: 5px; font-size: 14px; }
+        .label { font-weight: bold; color: #adff2f; }
+        .timestamp { font-size: 11px; color: #ccc; margin-top: 10px; font-style: italic; }
+        
+        #queryList { max-width: 800px; margin: 0 auto; }
+        .empty-msg { text-align: center; opacity: 0.6; margin-top: 50px; }
+    </style>
 </head>
-
 <body>
 
-<h2>📋 POP UP APPLICATIONS</h2>
-<div id="list"></div>
+    <div class="header">
+        <h1>Admin Queries</h1>
+        <button id="actionBtn">SELECT</button>
+    </div>
+
+    <div id="queryList">
+        <div class="empty-msg">Loading queries...</div>
+    </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, onValue, remove, set, update, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-/* ✅ INIT FIRST */
-const firebaseConfig = {
-  apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
-  authDomain: "tose-ccf8f.firebaseapp.com",
-  databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "tose-ccf8f",
-  storageBucket: "tose-ccf8f.appspot.com",
-  messagingSenderId: "475447495901",
-  appId: "1:475447495901:web:9189276a162a3680afdf34"
-};
+    const firebaseConfig = {
+        apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
+        authDomain: "tose-ccf8f.firebaseapp.com",
+        databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "tose-ccf8f",
+        storageBucket: "tose-ccf8f.firebasestorage.app",
+        messagingSenderId: "475447495901",
+        appId: "1:475447495901:web:9189276a162a3680afdf34",
+    };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const queriesRef = ref(db, 'queries');
 
-const list = document.getElementById("list");
+    const queryListDiv = document.getElementById('queryList');
+    const actionBtn = document.getElementById('actionBtn');
+    
+    let isDeleteMode = false;
+    let selectedIds = new Set();
 
-/* 🔐 AUTH CHECK */
-onAuthStateChanged(auth, async (user) => {
+    // Toggle Button Logic
+    actionBtn.addEventListener('click', async () => {
+        if (!isDeleteMode) {
+            // Switch to Delete Mode
+            isDeleteMode = true;
+            actionBtn.textContent = "DELETE";
+            actionBtn.classList.add('delete-mode');
+        } else {
+            // Execute Deletion
+            if (selectedIds.size === 0) {
+                resetUI();
+                return;
+            }
 
-  if (!user) {
-    location.href = "admin.html";
-    return;
-  }
+            if (confirm(`Delete ${selectedIds.size} selected query/queries?`)) {
+                for (let id of selectedIds) {
+                    await remove(ref(db, `queries/${id}`));
+                }
+                selectedIds.clear();
+                resetUI();
+            }
+        }
+    });
 
-  const snap = await get(ref(db, "admins/" + user.uid));
-
-  if (!snap.exists()) {
-    location.href = "admin.html";
-  }
-
-});
-  
-/* 📥 LOAD APPLICATIONS */
-onValue(ref(db,"applications"), snap=>{
-  const data = snap.val() || {};
-  list.innerHTML="";
-
-  const keys = Object.keys(data).reverse(); // newest first
-
-  if(keys.length === 0){
-    list.innerHTML = `<div class="empty">No applications</div>`;
-    return;
-  }
-
-  keys.forEach(uid=>{
-    const r = data[uid];
-
-    const div = document.createElement("div");
-    div.className="card";
-
-    div.innerHTML = `
-      <b>${r.name || ""} ${r.surname || ""}</b><br>
-      📞 ${r.number || ""}<br>
-      🎂 ${r.age || ""}<br>
-      🔗 ${r.referral || "None"}<br>
-      <small>${new Date(r.timestamp).toLocaleString()}</small>
-
-      <div class="approve" onclick="approve('${uid}')">
-        GRANT ✅
-      </div>
-    `;
-
-    list.appendChild(div);
-  });
-});
-
-/* ✅ APPROVE */
-window.approve = async function(uid){
-
-  try{
-    const now = Date.now();
-
-    const snap = await get(ref(db,"applications/"+uid));
-    const data = snap.val();
-
-    if(!data){
-      alert("Application not found ❌");
-      return;
+    function resetUI() {
+        isDeleteMode = false;
+        actionBtn.textContent = "SELECT";
+        actionBtn.classList.remove('delete-mode');
+        document.querySelectorAll('.query-card').forEach(el => el.classList.remove('selected'));
     }
 
-    // MOVE TO HISTORY
-    await set(ref(db,"applicationsHistory/"+uid),{
-      ...data,
-      approvedAt: now
+    // Fetch and Display Data
+    onValue(queriesRef, (snapshot) => {
+        queryListDiv.innerHTML = "";
+        const data = snapshot.val();
+
+        if (!data) {
+            queryListDiv.innerHTML = '<div class="empty-msg">No queries found.</div>';
+            return;
+        }
+
+        Object.keys(data).reverse().forEach(key => {
+            const item = data[key];
+            const date = new Date(item.timestamp).toLocaleString();
+
+            const card = document.createElement('div');
+            card.className = 'query-card';
+            if (selectedIds.has(key)) card.classList.add('selected');
+
+            card.innerHTML = `
+                <div class="field"><span class="label">Name:</span> ${item.name} ${item.surname}</div>
+                <div class="field"><span class="label">ID:</span> ${item.idNumber}</div>
+                <div class="field"><span class="label">Message:</span> ${item.query}</div>
+                <div class="timestamp">Received: ${date}</div>
+            `;
+
+            card.addEventListener('click', () => {
+                if (isDeleteMode) {
+                    if (selectedIds.has(key)) {
+                        selectedIds.delete(key);
+                        card.classList.remove('selected');
+                    } else {
+                        selectedIds.add(key);
+                        card.classList.add('selected');
+                    }
+                }
+            });
+
+            queryListDiv.appendChild(card);
+        });
     });
-
-    // APPROVE USER
-    await update(ref(db,"users/"+uid),{
-      approved:true
-    });
-
-    // REMOVE FROM PENDING
-    await remove(ref(db,"applications/"+uid));
-
-    alert("User Approved ✅");
-
-  }catch(e){
-    console.error(e);
-    alert("Error ❌");
-  }
-};
 </script>
-
 </body>
 </html>
