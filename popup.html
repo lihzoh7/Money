@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Manual Editor Leaderboard</title>
+
+<style>
+body {
+  margin: 0;
+  background: #001f3f;
+  color: white;
+  font-family: Arial;
+  text-align: center;
+}
+
+#date, #timer {
+  font-size: 42px;
+  margin: 10px;
+  font-weight: bold;
+}
+
+#content {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  padding: 20px;
+}
+
+.card {
+  background: #002b55;
+  padding: 15px;
+  border-radius: 10px;
+  font-size: 20px;
+  border: 1px solid transparent;
+  transition: border 0.3s;
+}
+
+/* Shows a subtle border only when you are actually typing */
+.card [contenteditable="true"]:focus {
+  outline: none;
+  border-bottom: 1px dashed #00d4ff;
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.gold { color: gold; border: 1px solid gold; }
+.silver { color: silver; border: 1px solid silver; }
+.bronze { color: #cd7f32; border: 1px solid #cd7f32; }
+.normal { color: #ccc; }
+
+.score {
+  font-size: 28px;
+  font-weight: bold;
+  display: block;
+  margin: 5px 0;
+}
+
+.amount {
+  color: #00ff88;
+  font-weight: bold;
+  display: block;
+  margin-bottom: 5px;
+}
+
+small {
+  display: block;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+#rank {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  font-size: 20px;
+}
+
+/* Instructions for you */
+.admin-note {
+  background: #ff0055;
+  padding: 5px;
+  font-size: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="admin-note">ADMIN MODE: Click any text below to edit it directly.</div>
+
+<div id="date">01/01/2026 12:00:00</div>
+<div id="timer">00H:00M</div>
+
+<div id="content">
+  <div class="card gold">
+    <b contenteditable="true">1. Name Surname</b><br>
+    <span class="score" contenteditable="true">5000</span>
+    <span class="amount" contenteditable="true">R 1500.00</span>
+    <small contenteditable="true">2026/04/30, 14:00:00</small>
+  </div>
+
+  <div class="card silver">
+    <b contenteditable="true">2. Name Surname</b><br>
+    <span class="score" contenteditable="true">4200</span>
+    <span class="amount" contenteditable="true">R 750.00</span>
+    <small contenteditable="true">2026/04/30, 14:05:00</small>
+  </div>
+
+  <div class="card bronze">
+    <b contenteditable="true">3. Name Surname</b><br>
+    <span class="score" contenteditable="true">3800</span>
+    <span class="amount" contenteditable="true">R 250.00</span>
+    <small contenteditable="true">2026/04/30, 14:10:00</small>
+  </div>
+
+  <div class="card normal">
+    <b contenteditable="true">4. Player Name</b><br>
+    <span class="score" contenteditable="true">3000</span>
+    <span class="amount" contenteditable="true">R 0.00</span>
+    <small contenteditable="true">Date/Time</small>
+  </div>
+
+  <div class="card normal">
+    <b contenteditable="true">5. Player Name</b><br>
+    <span class="score" contenteditable="true">2800</span>
+    <span class="amount" contenteditable="true">R 0.00</span>
+    <small contenteditable="true">Date/Time</small>
+  </div>
+
+  <div class="card normal">
+    <b contenteditable="true">6. Player Name</b><br>
+    <span class="score" contenteditable="true">2500</span>
+    <span class="amount" contenteditable="true">R 0.00</span>
+    <small contenteditable="true">Date/Time</small>
+  </div>
+
+  <div class="card normal">
+    <b contenteditable="true">7. Player Name</b><br>
+    <span class="score" contenteditable="true">2000</span>
+    <span class="amount" contenteditable="true">R 0.00</span>
+    <small contenteditable="true">Date/Time</small>
+  </div>
+
+  <div class="card normal">
+    <b contenteditable="true">8. Player Name</b><br>
+    <span class="score" contenteditable="true">1500</span>
+    <span class="amount" contenteditable="true">R 0.00</span>
+    <small contenteditable="true">Date/Time</small>
+  </div>
+
+  <div class="card normal">
+    <b contenteditable="true">9. Player Name</b><br>
+    <span class="score" contenteditable="true">1000</span>
+    <span class="amount" contenteditable="true">R 0.00</span>
+    <small contenteditable="true">Date/Time</small>
+  </div>
+</div>
+
+<div id="rank">RANK: ADMIN</div>
+
+<script>
+/* Simple Timer Logic to keep the page feeling alive */
+function updateTime(){
+  let now = new Date();
+  document.getElementById("date").innerText = now.toLocaleDateString() + " " + now.toLocaleTimeString();
+  
+  let end = new Date();
+  if(now.getHours() < 17){
+    end.setHours(17,30,0,0);
+  } else {
+    end.setDate(end.getDate()+1);
+    end.setHours(5,30,0,0);
+  }
+  let diff = end - now;
+  let h = Math.floor(diff/1000/60/60);
+  let m = Math.floor((diff/1000/60)%60);
+  document.getElementById("timer").innerText = `${h}H:${m}M`;
+}
+setInterval(updateTime, 1000);
+updateTime();
+</script>
+
+</body>
+</html>
