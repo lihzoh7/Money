@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPACE GLASS - Admin Panel</title>
+    <style>
+        body { background-color: #2c003e; font-family: 'Segoe UI', Arial, sans-serif; color: white; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid green; padding-bottom: 10px; margin-bottom: 20px; }
+        
+        #actionBtn { 
+            background-color: green; color: white; border: none; padding: 10px 20px; 
+            border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s;
+        }
+        #actionBtn.delete-mode { background-color: #cc0000; }
+
+        .query-card { 
+            background-color: #4b0082; padding: 15px; margin-bottom: 15px; 
+            border-radius: 8px; border-left: 5px solid green; cursor: pointer;
+            transition: background 0.2s; position: relative;
+        }
+        .query-card.selected { background-color: #666666 !important; border-left-color: #fff; }
+        
+        .field { margin-bottom: 5px; font-size: 14px; }
+        .label { font-weight: bold; color: #adff2f; }
+        .timestamp { font-size: 11px; color: #ccc; margin-top: 10px; font-style: italic; }
+        
+        #queryList { max-width: 800px; margin: 0 auto; }
+        .empty-msg { text-align: center; opacity: 0.6; margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Admin Queries</h1>
+        <button id="actionBtn">SELECT</button>
+    </div>
+
+    <div id="queryList">
+        <div class="empty-msg">Loading queries...</div>
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
+        authDomain: "tose-ccf8f.firebaseapp.com",
+        databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "tose-ccf8f",
+        storageBucket: "tose-ccf8f.firebasestorage.app",
+        messagingSenderId: "475447495901",
+        appId: "1:475447495901:web:9189276a162a3680afdf34",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const queriesRef = ref(db, 'queries');
+
+    const queryListDiv = document.getElementById('queryList');
+    const actionBtn = document.getElementById('actionBtn');
+    
+    let isDeleteMode = false;
+    let selectedIds = new Set();
+
+    // Toggle Button Logic
+    actionBtn.addEventListener('click', async () => {
+        if (!isDeleteMode) {
+            // Switch to Delete Mode
+            isDeleteMode = true;
+            actionBtn.textContent = "DELETE";
+            actionBtn.classList.add('delete-mode');
+        } else {
+            // Execute Deletion
+            if (selectedIds.size === 0) {
+                resetUI();
+                return;
+            }
+
+            if (confirm(`Delete ${selectedIds.size} selected query/queries?`)) {
+                for (let id of selectedIds) {
+                    await remove(ref(db, `queries/${id}`));
+                }
+                selectedIds.clear();
+                resetUI();
+            }
+        }
+    });
+
+    function resetUI() {
+        isDeleteMode = false;
+        actionBtn.textContent = "SELECT";
+        actionBtn.classList.remove('delete-mode');
+        document.querySelectorAll('.query-card').forEach(el => el.classList.remove('selected'));
+    }
+
+    // Fetch and Display Data
+    onValue(queriesRef, (snapshot) => {
+        queryListDiv.innerHTML = "";
+        const data = snapshot.val();
+
+        if (!data) {
+            queryListDiv.innerHTML = '<div class="empty-msg">No queries found.</div>';
+            return;
+        }
+
+        Object.keys(data).reverse().forEach(key => {
+            const item = data[key];
+            const date = new Date(item.timestamp).toLocaleString();
+
+            const card = document.createElement('div');
+            card.className = 'query-card';
+            if (selectedIds.has(key)) card.classList.add('selected');
+
+            card.innerHTML = `
+                <div class="field"><span class="label">Name:</span> ${item.name} ${item.surname}</div>
+                <div class="field"><span class="label">ID:</span> ${item.idNumber}</div>
+                <div class="field"><span class="label">Message:</span> ${item.query}</div>
+                <div class="timestamp">Received: ${date}</div>
+            `;
+
+            card.addEventListener('click', () => {
+                if (isDeleteMode) {
+                    if (selectedIds.has(key)) {
+                        selectedIds.delete(key);
+                        card.classList.remove('selected');
+                    } else {
+                        selectedIds.add(key);
+                        card.classList.add('selected');
+                    }
+                }
+            });
+
+            queryListDiv.appendChild(card);
+        });
+    });
+</script>
+</body>
+</html>
