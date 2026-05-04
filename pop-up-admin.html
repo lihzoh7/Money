@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Pop Up Admin</title>
+<title>Admin Panel</title>
 
 <style>
 body{
@@ -12,121 +12,175 @@ body{
   color:white;
   padding:20px;
 }
+
+h2{
+  margin-top:30px;
+}
+
 .card{
   background:#1e1e1e;
   padding:15px;
   margin-bottom:10px;
   border-radius:10px;
 }
-.approve{
+
+.btn{
   margin-top:10px;
   padding:10px;
-  background:green;
-  text-align:center;
-  cursor:pointer;
   border-radius:6px;
+  cursor:pointer;
+  text-align:center;
 }
+
+.approve{ background:green; }
+.reject{ background:red; }
+
+small{ color:#aaa; }
 </style>
 </head>
 
 <body>
 
-<h2>📋 POP UP APPLICATIONS</h2>
-<div id="list"></div>
+<h1>⚙️ ADMIN PANEL</h1>
+
+<h2>👥 Users</h2>
+<div id="usersList"></div>
+
+<h2>📋 Applications</h2>
+<div id="appsList"></div>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, onValue, remove, set, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { 
+  getDatabase, ref, onValue, get, set, update, remove 
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-const auth = getAuth();
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    location.href = "admin.html";
-    return;
-  }
-
-  const snap = await get(ref(db, "admins/" + user.uid));
-
-  if (!snap.exists()) {
-    location.href = "admin.html";
-  }
-});
 const firebaseConfig = {
   apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
   authDomain: "tose-ccf8f.firebaseapp.com",
   databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "tose-ccf8f",
-  storageBucket: "tose-ccf8f.appspot.com",
-  messagingSenderId: "475447495901",
-  appId: "1:475447495901:web:9189276a162a3680afdf34"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
 
-const list = document.getElementById("list");
+const usersList = document.getElementById("usersList");
+const appsList = document.getElementById("appsList");
 
-/* LOAD APPLICATIONS */
-onValue(ref(db,"applications"), snap=>{
-  const data = snap.val() || {};
-  list.innerHTML="";
+let currentUser;
 
-  Object.keys(data).forEach(uid=>{
-    const r = data[uid];
+/* =========================
+   🔐 AUTH + ADMIN CHECK
+========================= */
+onAuthStateChanged(auth, async (user)=>{
+  if(!user){
+    location.href = "admin.html";
+    return;
+  }
 
-    const div = document.createElement("div");
-    div.className="card";
+  const adminSnap = await get(ref(db, "admins/" + user.uid));
 
-    div.innerHTML = `
-      <b>${r.name} ${r.surname}</b><br>
-      📞 ${r.number}<br>
-      🎂 ${r.age}<br>
-      🔗 ${r.referral || "None"}<br>
-      <small>${new Date(r.timestamp).toLocaleString()}</small>
+  if(!adminSnap.exists()){
+    alert("Not admin ❌");
+    location.href = "admin.html";
+    return;
+  }
 
-      <div class="approve" onclick="approve('${uid}')">
-        GRANT ✅
-      </div>
-    `;
+  currentUser = user;
 
-    list.appendChild(div);
-  });
+  loadUsers();
+  loadApplications();
 });
 
-/* APPROVE */
+/* =========================
+   👥 LOAD USERS
+========================= */
+function loadUsers(){
+  onValue(ref(db,"users"), snap=>{
+    const data = snap.val() || {};
+    usersList.innerHTML = "";
+
+    Object.keys(data).forEach(uid=>{
+      const u = data[uid];
+
+      let div = document.createElement("div");
+      div.className = "card";
+
+      div.innerHTML = `
+        <b>${u.name || ""} ${u.surname || ""}</b><br>
+        📧 ${u.email || ""}<br>
+        📞 ${u.cellNumber || ""}<br>
+        ✅ Approved: ${u.approved ? "YES" : "NO"}
+      `;
+
+      usersList.appendChild(div);
+    });
+  });
+}
+
+/* =========================
+   📋 LOAD APPLICATIONS
+========================= */
+function loadApplications(){
+  onValue(ref(db,"applications"), snap=>{
+    const data = snap.val() || {};
+    appsList.innerHTML = "";
+
+    Object.keys(data).forEach(uid=>{
+      const a = data[uid];
+
+      let div = document.createElement("div");
+      div.className = "card";
+
+      div.innerHTML = `
+        <b>${a.name} ${a.surname}</b><br>
+        📞 ${a.number}<br>
+        🎂 ${a.age}<br>
+        🔗 ${a.referral || "None"}<br>
+        <small>${new Date(a.timestamp).toLocaleString()}</small>
+
+        <div class="btn approve" onclick="approve('${uid}')">
+          APPROVE ✅
+        </div>
+      `;
+
+      appsList.appendChild(div);
+    });
+  });
+}
+
+/* =========================
+   ✅ APPROVE USER
+========================= */
 window.approve = async function(uid){
+
+  const snap = await get(ref(db,"applications/"+uid));
+  const data = snap.val();
+
+  if(!data) return;
 
   const now = Date.now();
 
-  const appRef = ref(db,"applications/"+uid);
-
-  // GET DATA FIRST
-  const snap = await fetchData(uid);
-  const data = snap;
-
-  // MOVE TO HISTORY
+  // Move to history
   await set(ref(db,"applicationsHistory/"+uid),{
     ...data,
     approvedAt: now
   });
 
-  // SET USER APPROVED
+  // Approve user
   await update(ref(db,"users/"+uid),{
     approved:true
   });
 
-  // REMOVE FROM PENDING
-  await remove(appRef);
+  // Remove application
+  await remove(ref(db,"applications/"+uid));
 
-  alert("User Approved ✅");
+  alert("User approved ✅");
 };
-
-async function fetchData(uid){
-  const res = await fetch(`https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app/applications/${uid}.json`);
-  return await res.json();
-}
 
 </script>
 
