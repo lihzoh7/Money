@@ -112,7 +112,18 @@ onValue(ref(db,"walletRequests"), snap=>{
 
       <small>${new Date(r.timestamp).toLocaleString()}</small>
 
-      <div class="approve" onclick="approve('${id}','${r.uid}',${r.gems || 0},${r.lives || 0})">
+      <div class="approve" onclick='approve(
+"${id}",
+"${r.uid}",
+${r.gems || 0},
+${r.lives || 0},
+`${r.referral || "none"}`,
+`${r.item || ""}`,
+`${r.price || ""}`,
+`${r.name || ""}`,
+`${r.surname || ""}`,
+`${r.email || ""}`
+)'>
         APPROVE
       </div>
     `;
