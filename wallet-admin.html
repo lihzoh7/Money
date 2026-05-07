@@ -133,7 +133,18 @@ ${r.lives || 0},
 });
 
 /* ✅ APPROVE FUNCTION */
-window.approve = async function(id, uid, rGems, rLives){
+window.approve = async function(
+  id,
+  uid,
+  rGems,
+  rLives,
+  referral,
+  item,
+  price,
+  name,
+  surname,
+  email
+){
 
   if (!currentUser) {
     alert("Auth not ready yet");
@@ -141,19 +152,55 @@ window.approve = async function(id, uid, rGems, rLives){
   }
 
   try{
+
     const walletRef = ref(db,"wallet/"+uid);
 
     const snap = await get(walletRef);
-    let wallet = snap.val() || {gems:0,lives:0};
 
-    wallet.gems = Number(wallet.gems || 0) + Number(rGems || 0);
-    wallet.lives = Number(wallet.lives || 0) + Number(rLives || 0);
+    let wallet = snap.val() || {
+      gems:0,
+      lives:0
+    };
+
+    wallet.gems += Number(rGems || 0);
+    wallet.lives += Number(rLives || 0);
 
     await update(walletRef, wallet);
 
     await update(ref(db,"walletRequests/"+id),{
-  status:"approved"
-});
+      status:"approved"
+    });
+
+    /* SAVE TRANSACTION */
+    await set(ref(db,"transactions/"+id),{
+
+      uid,
+      requestId:id,
+
+      name,
+      surname,
+      email,
+
+      item,
+      price,
+
+      gems:rGems,
+      lives:rLives,
+
+      referral,
+
+      approvedAt:Date.now()
+    });
+
+    alert("Approved ✅");
+
+  }catch(e){
+
+    console.error(e);
+
+    alert("Error approving ❌");
+  }
+};
 
 /* SAVE TRANSACTION */
 await set(ref(db,"transactions/"+id),{
