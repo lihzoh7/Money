@@ -202,29 +202,6 @@ window.approve = async function(
   }
 };
 
-/* SAVE TRANSACTION */
-await set(ref(db,"transactions/"+id),{
-  ...wallet,
-  uid,
-  requestId:id,
-  gems:rGems,
-  lives:rLives,
-  referral:r.referral || "none",
-  approvedAt:Date.now(),
-  item:r.item || "",
-  price:r.price || "",
-  name:r.name || "",
-  surname:r.surname || "",
-  email:r.email || ""
-});
-
-    alert("Approved ✅");
-
-  }catch(e){
-    console.error(e);
-    alert("Error approving ❌");
-  }
-};
 </script>
 
 </body>
