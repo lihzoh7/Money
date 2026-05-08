@@ -107,22 +107,42 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 const container =
-  document.getElementById("container");
+document.getElementById("container");
 
-/* LOAD TRANSACTIONS */
 onValue(ref(db,"transactions"), snap=>{
 
-  const data = snap.val() || {};
+  console.log("TRANSACTIONS:", snap.val());
+
+  const data = snap.val();
 
   container.innerHTML = "";
 
+  if(!data){
+
+    container.innerHTML = `
+      <div class="empty">
+        No transactions yet
+      </div>
+    `;
+
+    return;
+  }
+
   const grouped = {};
 
-  Object.values(data).forEach(t=>{
+  Object.keys(data).forEach(id=>{
 
-    if(!t.approvedAt) return;
+    const t = data[id];
 
-    const date = new Date(t.approvedAt);
+    if(!t || typeof t !== "object"){
+      return;
+    }
+
+    const approvedAt =
+      t.approvedAt || Date.now();
+
+    const date =
+      new Date(approvedAt);
 
     const dayKey =
       date.toLocaleDateString("en-GB",{
@@ -164,10 +184,10 @@ onValue(ref(db,"transactions"), snap=>{
     transactions.forEach(t=>{
 
       const amount =
-        Number(
-          String(t.price || "")
+        parseFloat(
+          String(t.price || "0")
           .replace("R","")
-        );
+        ) || 0;
 
       total += amount;
 
@@ -220,13 +240,15 @@ onValue(ref(db,"transactions"), snap=>{
         ${t.referral || "none"}<br><br>
 
         <small>
-          ${new Date(t.approvedAt)
-          .toLocaleString()}
+          ${new Date(
+            t.approvedAt || Date.now()
+          ).toLocaleString()}
         </small>
 
       </div>
 
       `;
+
     });
 
     cards += `</div>`;
