@@ -5,62 +5,94 @@
 <title>Transactions</title>
 
 <style>
+
 body{
   margin:0;
   font-family:Arial;
-  background:#111;
+  background:#0f172a;
   color:white;
-  padding:20px;
+  padding:15px;
 }
 
-h2{
+h1{
+  text-align:center;
   margin-bottom:20px;
 }
 
-table{
-  width:100%;
-  border-collapse:collapse;
-  background:#1e1e1e;
+.dayTab{
+  background:#4da6ff;
+  color:white;
+  padding:15px;
   border-radius:10px;
-  overflow:hidden;
+  margin-top:20px;
+  cursor:pointer;
+  font-size:20px;
+  font-weight:bold;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
-th, td{
-  padding:12px;
-  text-align:left;
-  border-bottom:1px solid #333;
+.dayContent{
+  display:none;
+  margin-top:10px;
 }
 
-th{
-  background:#222;
-  color:#00ff99;
+.transactionsGrid{
+  display:grid;
+  grid-template-columns:
+  repeat(auto-fit,minmax(300px,1fr));
+  gap:15px;
 }
 
-tr:hover{
-  background:#2a2a2a;
+.card{
+  background:#1e293b;
+  padding:15px;
+  border-radius:10px;
+  line-height:1.6;
+}
+
+.totalBar{
+  margin-top:15px;
+  background:#38bdf8;
+  color:white;
+  padding:15px;
+  border-radius:10px;
+  display:flex;
+  justify-content:space-between;
+  font-size:20px;
+  font-weight:bold;
 }
 
 .empty{
   text-align:center;
   margin-top:50px;
-  color:#777;
+  color:#aaa;
 }
+
 </style>
 </head>
 
 <body>
 
-<h2>📊 TRANSACTIONS</h2>
+<h1>💳 Transactions</h1>
 
-<div id="wrap"></div>
+<div id="container"></div>
 
 <script type="module">
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 
-/* Firebase config */
+import {
+  getDatabase,
+  ref,
+  onValue
+}
+from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
 const firebaseConfig = {
+
   apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
   authDomain: "tose-ccf8f.firebaseapp.com",
   databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
@@ -71,45 +103,164 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+
 const db = getDatabase(app);
 
-const wrap = document.getElementById("wrap");
+const container =
+  document.getElementById("container");
 
 /* LOAD TRANSACTIONS */
-onValue(ref(db,"transactions"), snap => {
+onValue(ref(db,"transactions"), snap=>{
 
   const data = snap.val() || {};
-  const keys = Object.keys(data).reverse();
 
-  if(keys.length === 0){
-    wrap.innerHTML = `<div class="empty">No transactions yet</div>`;
+  container.innerHTML = "";
+
+  const grouped = {};
+
+  Object.values(data).forEach(t=>{
+
+    if(!t.approvedAt) return;
+
+    const date = new Date(t.approvedAt);
+
+    const dayKey =
+      date.toLocaleDateString("en-GB",{
+        weekday:"long",
+        day:"2-digit",
+        month:"short",
+        year:"numeric"
+      });
+
+    if(!grouped[dayKey]){
+      grouped[dayKey] = [];
+    }
+
+    grouped[dayKey].push(t);
+
+  });
+
+  const dates =
+    Object.keys(grouped).reverse();
+
+  if(dates.length === 0){
+
+    container.innerHTML = `
+      <div class="empty">
+        No transactions yet
+      </div>
+    `;
+
     return;
   }
 
-  let html = `
-    <table>
-      <tr>
-        <th>Name</th>
-        <th>Item</th>
-        <th>Price</th>
-      </tr>
-  `;
+  dates.forEach((date,index)=>{
 
-  keys.forEach(id => {
-    const t = data[id];
+    const transactions =
+      grouped[date];
 
-    html += `
-      <tr>
-        <td>${t.name || ""} ${t.surname || ""}</td>
-        <td>${t.item || ""}</td>
-        <td>${t.price || ""}</td>
-      </tr>
+    let total = 0;
+
+    transactions.forEach(t=>{
+
+      const amount =
+        Number(
+          String(t.price || "")
+          .replace("R","")
+        );
+
+      total += amount;
+
+    });
+
+    const tab =
+      document.createElement("div");
+
+    tab.className = "dayTab";
+
+    tab.innerHTML = `
+      <span>${date}</span>
+      <span>▼</span>
     `;
+
+    const content =
+      document.createElement("div");
+
+    content.className = "dayContent";
+
+    content.style.display =
+      index === 0 ? "block" : "none";
+
+    let cards = `
+      <div class="transactionsGrid">
+    `;
+
+    transactions.forEach(t=>{
+
+      cards += `
+
+      <div class="card">
+
+        <b>
+          ${t.name || ""}
+          ${t.surname || ""}
+        </b><br>
+
+        ${t.email || ""}<br><br>
+
+        🧾 ${t.item || ""}<br>
+
+        💰 ${t.price || ""}<br>
+
+        💎 Gems: ${t.gems || 0}<br>
+
+        ❤️ Lives: ${t.lives || 0}<br>
+
+        👥 Referral:
+        ${t.referral || "none"}<br><br>
+
+        <small>
+          ${new Date(t.approvedAt)
+          .toLocaleString()}
+        </small>
+
+      </div>
+
+      `;
+    });
+
+    cards += `</div>`;
+
+    cards += `
+
+      <div class="totalBar">
+
+        <span>Total</span>
+
+        <span>
+          R ${total.toFixed(2)}
+        </span>
+
+      </div>
+
+    `;
+
+    content.innerHTML = cards;
+
+    tab.onclick = ()=>{
+
+      content.style.display =
+        content.style.display === "none"
+        ? "block"
+        : "none";
+
+    };
+
+    container.appendChild(tab);
+
+    container.appendChild(content);
+
   });
-
-  html += `</table>`;
-
-  wrap.innerHTML = html;
 
 });
 
