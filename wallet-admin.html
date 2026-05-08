@@ -109,7 +109,7 @@ onValue(ref(db,"walletRequests"), snap=>{
 
       🧾 ${r.item} - ${r.price}<br>
       💎 Gems: ${r.gems || 0} | ❤️ Lives: ${r.lives || 0}<br>
-
+👥 Referral: ${r.referral || "none"}<br>
       <small>${new Date(r.timestamp).toLocaleString()}</small>
 
       <div class="approve" onclick="approve('${id}','${r.uid}',${r.gems || 0},${r.lives || 0})">
