@@ -1,90 +1,150 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ADMIN</title>
 
 <style>
-body{
-  margin:0;
-  background:black;
-  font-family:Arial;
+body {
+  margin: 0;
+  background: black;
+  font-family: Arial, sans-serif;
+  color: white;
 }
 
 /* LOGIN POPUP */
-#loginBox{
-  position:fixed;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  background:#111;
-  padding:30px;
-  border-radius:10px;
-  text-align:center;
-  box-shadow:0 0 20px rgba(0,0,0,0.8);
+#loginBox {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #111;
+  padding: 30px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(0,0,0,0.8);
+  z-index: 100;
 }
 
-#loginBox input{
-  display:block;
-  width:200px;
-  margin:10px auto;
-  padding:10px;
-  border:none;
-  border-radius:5px;
+#loginBox input {
+  display: block;
+  width: 200px;
+  margin: 10px auto;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  background: #222;
+  color: white;
 }
 
-#loginBox button{
-  padding:10px 20px;
-  background:#003366;
-  color:white;
-  border:none;
-  border-radius:5px;
-  cursor:pointer;
+#loginBox button {
+  padding: 10px 20px;
+  background: #003366;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
 }
 
-#status{
-  margin-top:10px;
-  font-size:14px;
-  color:orange;
+#status {
+  margin-top: 10px;
+  font-size: 14px;
+  color: orange;
 }
 
-/* PANEL */
-#panel{
-  display:none;
-  width:90%;
-  height:90vh;
-  margin:auto;
-  margin-top:5vh;
-  background:#001f3f;
-  display:grid;
-  grid-template-rows:repeat(8,1fr);
-  gap:5px;
-  padding:10px;
-  box-sizing:border-box;
+/* MAIN INTERFACE CONTAINER (Hidden until authenticated) */
+#mainWrapper {
+  display: none;
+  width: 90%;
+  max-width: 1000px;
+  margin: 5vh auto;
 }
 
-.tile{
-  background:#003366;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:white;
-  font-size:18px;
-  cursor:pointer;
-  border-radius:8px;
+/* HEADER NAVIGATION BAR */
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background: #00152b;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border: 1px solid #002b5c;
 }
 
-.plus{
-  text-align:center;
-  font-size:22px;
-  color:white;
+.panel-title {
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.nav-arrow {
+  font-size: 28px;
+  color: #3b82f6;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.2s, color 0.2s;
+  user-select: none;
+}
+
+.nav-arrow:hover {
+  color: #60a5fa;
+  transform: scale(1.1);
+}
+
+/* PANELS (Grid view configurations) */
+#panelAdmin, #panelQuizer {
+  background: #001f3f;
+  padding: 15px;
+  border-radius: 8px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* View Control Toggles */
+.view-panel {
+  display: none !important;
+}
+.view-panel.active {
+  display: flex !important;
+}
+
+/* STRETCHING TILES */
+.tile {
+  background: #003366;
+  height: 65px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: background 0.2s, border-color 0.2s, transform 0.1s;
+  width: 100%;
+}
+
+.tile:hover {
+  background: #004080;
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+}
+
+.tile:active {
+  transform: translateY(0);
 }
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
 <div id="loginBox">
   <h3>Admin Login</h3>
   <input id="email" placeholder="Email">
@@ -93,24 +153,33 @@ body{
   <div id="status"></div>
 </div>
 
-<!-- PANEL -->
-<div id="panel">
+<div id="mainWrapper">
 
-  <div class="tile" onclick="go('admin-prizes.html')">PRIZES</div>
+  <div class="panel-header">
+    <div id="headerTitle" class="panel-title">ADMIN PANEL</div>
+    <div id="toggleArrow" class="nav-arrow" onclick="toggleViews()">➜</div>
+  </div>
 
-  <div class="tile" onclick="go('pop-up-admin.html')">POP UP</div>
-  
-  <div class="tile" onclick="go('queries.html')">QUERIES</div>
+  <div id="panelAdmin" class="view-panel active">
+    <div class="tile" onclick="go('admin-prizes.html')">PRIZES</div>
+    <div class="tile" onclick="go('pop-up-admin.html')">POP UP</div>
+    <div class="tile" onclick="go('queries.html')">QUERIES</div>
+    <div class="tile" onclick="go('wallet-admin.html')">WALLET</div>
+    <div class="tile" onclick="go('transactions.html')">TRANSACTIONS</div>
+    <div class="tile" onclick="go('leaderboard-admin.html')">LEADERBOARD</div>
+    <div class="tile" onclick="go('players-admin.html')">PLAYERS</div>
+    <div class="tile" onclick="go('envelope-admin.html')">✉ ENVELOPE</div>
+  </div>
 
-  <div class="tile" onclick="go('wallet-admin.html')">WALLET</div>
-  
-  <div class="tile" onclick="go('transactions.html')">TRANSACTIONS</div>
-
-  <div class="tile" onclick="go('leaderboard-admin.html')">LEADERBOARD</div>
-
-  <div class="tile" onclick="go('players-admin.html')">PLAYERS</div>
-
-  <div class="tile" onclick="go('envelope-admin.html')">✉ ENVELOPE</div>
+  <div id="panelQuizer" class="view-panel">
+    <div class="tile" onclick="go('quizmaker.html')">QUIZER</div>
+    <div class="tile" onclick="go('audio.html')">AUDIO</div>
+    <div class="tile" onclick="go('video.html')">VIDEO</div>
+    <div class="tile" onclick="go('images.html')">IMAGES</div>
+    <div class="tile" onclick="go('adminquizerleaderboard.html')">LEADERBOARD</div>
+    <div class="tile" onclick="go('prizequizer.html')">PRIZE</div>
+    <div class="tile" onclick="go('search.html')">SEARCH</div>
+  </div>
 
 </div>
 
@@ -151,7 +220,6 @@ const loginBtn = document.getElementById("loginBtn");
 loginBtn.addEventListener("click", login);
 
 async function login(){
-
   const email = emailEl.value.trim();
   const pass = passEl.value;
 
@@ -175,7 +243,6 @@ async function login(){
       statusEl.innerText = "Not admin ❌";
       await signOut(auth);
     }
-
   }catch(e){
     console.error(e);
     statusEl.innerText = "Login failed ❌";
@@ -187,22 +254,43 @@ onAuthStateChanged(auth, async (user)=>{
   if(!user) return;
 
   const snap = await get(ref(db, "admins/" + user.uid));
-
   if(snap.exists()){
     showPanel();
   }
 });
 
-/* SHOW PANEL */
+/* SHOW MAIN INTERFACE */
 function showPanel(){
-  document.getElementById("loginBox").style.display="none";
-  document.getElementById("panel").style.display="grid";
+  document.getElementById("loginBox").style.display = "none";
+  document.getElementById("mainWrapper").style.display = "block";
+}
+
+/* VIEW SWITCHER LOGIC */
+window.toggleViews = function() {
+  const adminPanel = document.getElementById("panelAdmin");
+  const quizerPanel = document.getElementById("panelQuizer");
+  const headerTitle = document.getElementById("headerTitle");
+  const arrow = document.getElementById("toggleArrow");
+
+  if(adminPanel.classList.contains("active")) {
+    // Switch to Quizer view
+    adminPanel.classList.remove("active");
+    quizerPanel.classList.add("active");
+    headerTitle.innerText = "QUIZER";
+    arrow.innerText = "⬅";
+  } else {
+    // Switch back to Main Admin view
+    quizerPanel.classList.remove("active");
+    adminPanel.classList.add("active");
+    headerTitle.innerText = "ADMIN PANEL";
+    arrow.innerText = "➜";
+  }
 }
 
 /* NAVIGATION */
-window.go = (p)=>location.href=p;
+window.go = (p) => location.href = p;
 
 </script>
 
 </body>
-  </html>
+</html>
