@@ -12,6 +12,10 @@
   .card.highlighted { border-color: red; background: #500; }
   .zoom-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; z-index:200; flex-direction: column; }
   .qa-box { background: rgba(255,255,255,0.1); padding: 15px; margin-top:15px; width:80%; max-height: 40%; overflow-y: auto; display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .popup-controls { width: 80%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .edit-btn { background: #87CEEB; color: black; border: none; padding: 8px 16px; font-weight: bold; cursor: pointer; border-radius: 4px; }
+  .close-btn { background: white; color: black; border: none; padding: 8px 16px; font-weight: bold; cursor: pointer; border-radius: 4px; }
+  .qa-box input { width: 90%; padding: 5px; border-radius: 4px; border: none; }
 </style>
 </head>
 <body>
@@ -24,15 +28,18 @@
 <div class="grid" id="mediaGrid"></div>
 
 <div class="zoom-overlay" id="zoomOverlay">
-  <span style="font-size:80px; margin-bottom:20px;">🔊</span>
+  <div class="popup-controls">
+    <button class="close-btn" onclick="closeZoom()">CLOSE</button>
+    <button class="edit-btn" id="popupEditBtn">EDIT</button>
+  </div>
+  <span style="font-size:60px; margin-bottom:10px;">🔊</span>
   <audio id="zoomAudio" controls></audio>
-  <button style="margin-top:20px; padding:10px 20px;" onclick="closeZoom()">CLOSE</button>
   <div class="qa-box" id="zoomQA"></div>
 </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+  import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
@@ -45,6 +52,9 @@
   const db = getDatabase(app);
   let selectedId = null;
   let items = {};
+  let currentActiveItem = null;
+  let currentActiveKey = null;
+  let isEditing = false;
 
   onValue(ref(db, "quizMedia/audio"), (snapshot) => {
     const grid = document.getElementById('mediaGrid');
@@ -65,7 +75,7 @@
       
       div.onclick = () => {
         if(div.classList.contains('highlighted')) return;
-        showZoom(item);
+        showZoom(item, key);
       };
       grid.appendChild(div);
     }
@@ -77,19 +87,73 @@
     if(selectedId) document.getElementById(id).classList.add('highlighted');
   }
 
-  function showZoom(item) {
+  function showZoom(item, key) {
+    currentActiveItem = item;
+    currentActiveKey = key;
+    isEditing = false;
+
+    const editBtn = document.getElementById('popupEditBtn');
+    editBtn.innerText = "EDIT";
+    editBtn.style.background = "#87CEEB";
+
     const audioEl = document.getElementById('zoomAudio');
     audioEl.src = item.data;
     audioEl.play();
-    const qaBox = document.getElementById('zoomQA');
-    qaBox.innerHTML = '';
-    item.questions.forEach((q, idx) => {
-      if(q || item.answers[idx]) {
-        qaBox.innerHTML += `<div><b>Q${idx+1}:</b> ${q}</div><div><b>A${idx+1}:</b> ${item.answers[idx]}</div>`;
-      }
-    });
+    
+    renderQA();
     document.getElementById('zoomOverlay').style.display = 'flex';
   }
+
+  function renderQA() {
+    const qaBox = document.getElementById('zoomQA');
+    qaBox.innerHTML = '';
+    
+    for (let idx = 0; idx < 10; idx++) {
+      let q = currentActiveItem.questions && currentActiveItem.questions[idx] ? currentActiveItem.questions[idx] : "";
+      let a = currentActiveItem.answers && currentActiveItem.answers[idx] ? currentActiveItem.answers[idx] : "";
+      
+      if (isEditing) {
+        qaBox.innerHTML += `
+          <div><b>Q${idx+1}:</b> <input type="text" id="edit-q-${idx}" value="${q.replace(/"/g, '&quot;')}"></div>
+          <div><b>A${idx+1}:</b> <input type="text" id="edit-a-${idx}" value="${a.replace(/"/g, '&quot;')}"></div>
+        `;
+      } else {
+        if (q || a) {
+          qaBox.innerHTML += `<div><b>Q${idx+1}:</b> ${q}</div><div><b>A${idx+1}:</b> ${a}</div>`;
+        }
+      }
+    }
+  }
+
+  document.getElementById('popupEditBtn').onclick = async () => {
+    const editBtn = document.getElementById('popupEditBtn');
+    if (!isEditing) {
+      isEditing = true;
+      editBtn.innerText = "SUBMIT";
+      editBtn.style.background = "#90EE90";
+      renderQA();
+    } else {
+      let updatedQuestions = [];
+      let updatedAnswers = [];
+      for(let idx=0; idx<10; idx++) {
+        updatedQuestions.push(document.getElementById(`edit-q-${idx}`).value);
+        updatedAnswers.push(document.getElementById(`edit-a-${idx}`).value);
+      }
+      
+      await update(ref(db, `quizMedia/audio/${currentActiveKey}`), {
+        questions: updatedQuestions,
+        answers: updatedAnswers
+      });
+      
+      alert("Updated successfully!");
+      isEditing = false;
+      editBtn.innerText = "EDIT";
+      editBtn.style.background = "#87CEEB";
+      currentActiveItem.questions = updatedQuestions;
+      currentActiveItem.answers = updatedAnswers;
+      renderQA();
+    }
+  };
 
   window.closeZoom = function() {
     document.getElementById('zoomAudio').pause();
