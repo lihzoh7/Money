@@ -41,6 +41,7 @@
     width: 100%;
     height: calc(100vh - 50px);
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     cursor: pointer;
@@ -127,6 +128,8 @@
     padding: 8px;
     border: none;
     border-radius: 4px;
+    background: white;
+    color: black;
   }
   #submit-btn {
     background-color: #87CEEB;
@@ -152,6 +155,7 @@
 
 <div id="plus-container">
   <div id="plus-sign">＋</div>
+  <div id="queue-status" style="font-size: 20px; margin-top: 10px; color: #90EE90;"></div>
 </div>
 
 <div class="modal" id="uploadModal">
@@ -162,7 +166,7 @@
   </div>
 </div>
 
-<input type="file" id="fileInput" style="display:none;">
+<input type="file" id="fileInput" style="display:none;" multiple>
 
 <div id="editor-container">
   <div class="stretched-tile" id="fileNameTile">File Name: None</div>
@@ -194,6 +198,8 @@
   const db = getDatabase(app);
 
   let currentType = '';
+  let fileQueue = [];
+  let currentFileIndex = 0;
   let base64Data = '';
   let fileName = '';
 
@@ -220,10 +226,29 @@
   }
 
   fileInput.onchange = function(e) {
-    const file = e.target.files[0];
-    if(!file) return;
+    if(!e.target.files.length) return;
+    fileQueue = Array.from(e.target.files);
+    currentFileIndex = 0;
+    processNextFile();
+  };
+
+  function processNextFile() {
+    if(currentFileIndex >= fileQueue.length) {
+      alert("All quiz items saved successfully!");
+      location.reload();
+      return;
+    }
+
+    const file = fileQueue[currentFileIndex];
     fileName = file.name;
-    document.getElementById('fileNameTile').innerText = "File Name: " + fileName;
+    
+    // Clear out previous values for the new file entry
+    for(let i=1; i<=10; i++) {
+      document.getElementById(`q-${i}`).value = '';
+      document.getElementById(`a-${i}`).value = '';
+    }
+
+    document.getElementById('fileNameTile').innerText = `File (${currentFileIndex + 1}/${fileQueue.length}): ` + fileName;
 
     const reader = new FileReader();
     reader.onload = function(event) {
@@ -232,7 +257,7 @@
       document.getElementById('editor-container').style.display = 'block';
     };
     reader.readAsDataURL(file);
-  };
+  }
 
   document.getElementById('submit-btn').onclick = async function() {
     let questions = [];
@@ -253,8 +278,9 @@
 
     let targetRef = ref(db, "quizMedia/" + currentType);
     await push(targetRef, payload);
-    alert("Quiz item saved successfully!");
-    location.reload();
+    
+    currentFileIndex++;
+    processNextFile();
   };
 </script>
 </body>
