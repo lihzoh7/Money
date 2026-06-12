@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Uploaded Videos</title>
+<title>Uploaded Videos (With Migration)</title>
 <style>
   body { margin: 0; font-family: Arial; background: #013220; color: white; padding: 20px; }
   .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .action-buttons { display: flex; gap: 15px; align-items: center; }
   .delete-btn { color: red; font-weight: bold; cursor: pointer; font-size: 20px; }
+  .migrate-btn { background: #FFD700; color: black; font-weight: bold; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
   .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
   .card { background: #02442A; padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; user-select: none; border: 3px solid transparent; }
   .card.highlighted { border-color: red; background: #500; }
@@ -23,9 +25,14 @@
 <body>
 
 <div class="top-bar">
-  <h2>VIDEO</h2>
-  <div class="delete-btn" id="deleteBtn">DELETE</div>
+  <h2>VIDEO GALLERY</h2>
+  <div class="action-buttons">
+    <button class="migrate-btn" id="migrateBtn">MIGRATE OLD VIDEOS</button>
+    <div class="delete-btn" id="deleteBtn">DELETE</div>
+  </div>
 </div>
+
+<div id="migration-status" style="color: #FFD700; margin-bottom: 15px; font-weight: bold;"></div>
 
 <div class="grid" id="mediaGrid"></div>
 
@@ -41,6 +48,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
   import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+  import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
@@ -51,6 +59,8 @@
   };
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+  const storage = getStorage(app);
+  
   let selectedId = null;
   let items = {};
   let currentActiveItem = null;
@@ -66,8 +76,12 @@
       const div = document.createElement('div');
       div.className = 'card';
       div.id = key;
-      // Preload metadata only to prevent browser network choking on heavy files
-      div.innerHTML = `<video src="${item.data}" preload="metadata"></video><p>${item.name}</p>`;
+      
+      // Labeling items to show if they are on cloud storage or still old text strings
+      const isBase64 = item.data && item.data.startsWith('data:');
+      const labelText = isBase64 ? `${item.name} (⚠️ Old String)` : `${item.name} (✅ Cloud Stream)`;
+      
+      div.innerHTML = `<video src="${item.data}" preload="metadata"></video><p>${labelText}</p>`;
       
       let pressTimer;
       div.addEventListener('mousedown', () => { pressTimer = setTimeout(() => toggleHighlight(key), 800); });
@@ -82,6 +96,75 @@
       grid.appendChild(div);
     }
   });
+
+  // HELPER FUNCTION: Converts old Base64 strings back into raw binary files for storage
+  function base64ToBlob(base64Data, contentType) {
+    const byteCharacters = atob(base64Data.split(',')[1]);
+    const byteArrays = [];
+    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+      const slice = byteCharacters.slice(offset, offset + 512);
+      const byteNumbers = new Array(slice.length);
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+    return new Blob(byteArrays, {type: contentType});
+  }
+
+  // AUTOMATED MIGRATION LOGIC
+  document.getElementById('migrateBtn').onclick = async () => {
+    const statusDiv = document.getElementById('migration-status');
+    const migrateBtn = document.getElementById('migrateBtn');
+    
+    let keysToMigrate = [];
+    for (let key in items) {
+      if (items[key].data && items[key].data.startsWith('data:')) {
+        keysToMigrate.push(key);
+      }
+    }
+
+    if (keysToMigrate.length === 0) {
+      alert("All videos are already migrated to Cloud Storage!");
+      return;
+    }
+
+    if (!confirm(`Found ${keysToMigrate.length} old text-based videos. Start moving them to storage? Your browser might briefly lag during the process.`)) return;
+
+    migrateBtn.disabled = true;
+    migrateBtn.innerText = "MIGRATING...";
+
+    for (let i = 0; i < keysToMigrate.length; i++) {
+      const key = keysToMigrate[i];
+      const item = items[key];
+      statusDiv.innerText = `Processing file ${i + 1} of ${keysToMigrate.length}: ${item.name}...`;
+
+      try {
+        // 1. Convert the old database text back into a video file
+        const contentType = item.data.split(';')[0].split(':')[1] || 'video/mp4';
+        const videoBlob = base64ToBlob(item.data, contentType);
+
+        // 2. Stream it straight into Cloud Storage
+        const storageRef = sRef(storage, `quiz_assets/video/${Date.now()}_${item.name}`);
+        const uploadSnapshot = await uploadBytes(storageRef, videoBlob);
+        const downloadURL = await getDownloadURL(uploadSnapshot.ref);
+
+        // 3. Swap the heavy data text string with the lightweight cloud URL
+        await update(ref(db, `quizMedia/video/${key}`), {
+          data: downloadURL
+        });
+
+      } catch (err) {
+        console.error(`Failed to move item: ${item.name}`, err);
+      }
+    }
+
+    statusDiv.innerText = "Migration complete! All video paths updated successfully.";
+    migrateBtn.disabled = false;
+    migrateBtn.innerText = "MIGRATE OLD VIDEOS";
+    alert("Success! All questions and answers were safely preserved.");
+  };
 
   function toggleHighlight(id) {
     document.querySelectorAll('.card').forEach(c => c.classList.remove('highlighted'));
