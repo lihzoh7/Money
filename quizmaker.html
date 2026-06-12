@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quiz Maker (Optimized)</title>
+<title>Quiz Maker (Speed Optimized)</title>
 <style>
   body { margin: 0; font-family: Arial, sans-serif; background-color: #013220; color: white; min-height: 100vh; padding-top: 60px; box-sizing: border-box; }
   header { position: fixed; top: 0; left: 0; width: 100%; height: 50px; background-color: #02442A; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 10; }
@@ -21,8 +21,8 @@
   .input-field { display: flex; flex-direction: column; }
   .input-field label { font-size: 12px; color: #90EE90; margin-bottom: 2px; }
   .input-field input { padding: 8px; border: none; border-radius: 4px; background: white; color: black; }
-  #submit-btn { background-color: #87CEEB; color: black; width: 100%; padding: 15px; font-size: 18px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; }
-  #submit-btn:disabled { background-color: #555; color: #aaa; cursor: not-allowed; }
+  #submit-btn { background-color: #87CEEB; color: black; width: 100%; padding: 15px; font-size: 18px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; transition: background 0.3s; }
+  #submit-btn:disabled { background-color: #3b5e6e; color: #fff; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -63,7 +63,8 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
   import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-  import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+  // Switched uploadBytes to uploadBytesResumable for chunk management
+  import { getStorage, ref as sRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
@@ -135,49 +136,64 @@
     document.getElementById('editor-container').style.display = 'block';
   }
 
-  submitBtn.onclick = async function() {
+  submitBtn.onclick = function() {
     submitBtn.disabled = true;
-    submitBtn.innerText = "UPLOADING FILE...";
+    submitBtn.innerText = "STARTING UPLOAD...";
 
-    try {
-      // 1. Upload raw binary file directly to cloud Storage path
-      const storageRef = sRef(storage, `quiz_assets/${currentType}/${Date.now()}_${fileName}`);
-      const uploadSnapshot = await uploadBytes(storageRef, currentFileBlob);
-      
-      // 2. Grab the clean CDN download link string
-      const downloadURL = await getDownloadURL(uploadSnapshot.ref);
+    const storageRef = sRef(storage, `quiz_assets/${currentType}/${Date.now()}_${fileName}`);
+    
+    // Using chunk data stream handler
+    const uploadTask = uploadBytesResumable(storageRef, currentFileBlob);
 
-      let questions = [];
-      let answers = [];
-      for(let i=1; i<=10; i++) {
-        questions.push(document.getElementById(`q-${i}`).value);
-        answers.push(document.getElementById(`a-${i}`).value);
+    uploadTask.on('state_changed', 
+      (snapshot) => {
+        // Calculate progress percentage precisely
+        const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+        submitBtn.innerText = `UPLOADING: ${progress}%`;
+      }, 
+      (error) => {
+        console.error(error);
+        alert("Upload failed! Check connection or Firebase Storage bucket configuration.");
+        submitBtn.disabled = false;
+        submitBtn.innerText = "SUBMIT";
+      }, 
+      async () => {
+        // Success block triggered once upload hits 100%
+        try {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+          let questions = [];
+          let answers = [];
+          for(let i=1; i<=10; i++) {
+            questions.push(document.getElementById(`q-${i}`).value);
+            answers.push(document.getElementById(`a-${i}`).value);
+          }
+
+          const payload = {
+            name: fileName,
+            type: currentType,
+            data: downloadURL, 
+            questions: questions,
+            answers: answers,
+            timestamp: Date.now()
+          };
+
+          let targetRef = ref(db, "quizMedia/" + currentType);
+          await push(targetRef, payload);
+          
+          submitBtn.disabled = false;
+          submitBtn.innerText = "SUBMIT";
+          
+          currentFileIndex++;
+          processNextFile();
+        } catch (dbError) {
+          console.error(dbError);
+          alert("Storage succeeded but database entry failed.");
+          submitBtn.disabled = false;
+          submitBtn.innerText = "SUBMIT";
+        }
       }
-
-      // 3. Save the tiny URL into Realtime Database instead of Base64 text
-      const payload = {
-        name: fileName,
-        type: currentType,
-        data: downloadURL, 
-        questions: questions,
-        answers: answers,
-        timestamp: Date.now()
-      };
-
-      let targetRef = ref(db, "quizMedia/" + currentType);
-      await push(targetRef, payload);
-      
-      submitBtn.disabled = false;
-      submitBtn.innerText = "SUBMIT";
-      
-      currentFileIndex++;
-      processNextFile();
-    } catch (error) {
-      console.error(error);
-      alert("Upload failed! Check your Firebase Storage rules.");
-      submitBtn.disabled = false;
-      submitBtn.innerText = "SUBMIT";
-    }
+    );
   };
 </script>
 </body>
