@@ -3,26 +3,146 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quiz Maker (Speed Optimized)</title>
+<title>Quiz Maker</title>
 <style>
-  body { margin: 0; font-family: Arial, sans-serif; background-color: #013220; color: white; min-height: 100vh; padding-top: 60px; box-sizing: border-box; }
-  header { position: fixed; top: 0; left: 0; width: 100%; height: 50px; background-color: #02442A; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; box-sizing: border-box; z-index: 10; }
-  header a { color: #90EE90; text-decoration: none; font-weight: bold; font-size: 18px; }
-  #plus-container { position: fixed; top: 50px; left: 0; width: 100%; height: calc(100vh - 50px); display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
-  #plus-sign { font-size: 150px; color: white; user-select: none; }
-  .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 100; }
-  .modal-box { background: #333; padding: 30px; border-radius: 10px; display: flex; gap: 20px; }
-  .square-btn { background: #555; color: white; width: 100px; height: 100px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 14px; }
-  .square-btn span { font-size: 28px; margin-top: 5px; }
-  #editor-container { display: none; max-width: 800px; margin: 20px auto; background: #02442A; padding: 20px; border-radius: 8px; }
-  .stretched-tile { background: #222; padding: 12px; margin-bottom: 15px; text-align: center; font-weight: bold; border-radius: 4px; word-break: break-all; }
-  .section-header { background: #444; padding: 10px; text-align: center; font-weight: bold; margin-top: 15px; }
-  .grid-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 10px 0; }
-  .input-field { display: flex; flex-direction: column; }
-  .input-field label { font-size: 12px; color: #90EE90; margin-bottom: 2px; }
-  .input-field input { padding: 8px; border: none; border-radius: 4px; background: white; color: black; }
-  #submit-btn { background-color: #87CEEB; color: black; width: 100%; padding: 15px; font-size: 18px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; transition: background 0.3s; }
-  #submit-btn:disabled { background-color: #3b5e6e; color: #fff; cursor: not-allowed; }
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #013220;
+    color: white;
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding-top: 60px;
+  }
+  header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    background-color: #02442A;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    box-sizing: border-box;
+    z-index: 10;
+  }
+  header a {
+    color: #90EE90;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 18px;
+  }
+  #plus-container {
+    position: fixed;
+    top: 50px;
+    left: 0;
+    width: 100%;
+    height: calc(100vh - 50px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
+  #plus-sign {
+    font-size: 150px;
+    color: white;
+    user-select: none;
+  }
+  .modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+  }
+  .modal-box {
+    background: #333;
+    padding: 30px;
+    border-radius: 10px;
+    display: flex;
+    gap: 20px;
+  }
+  .square-btn {
+    background: #555;
+    color: white;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .square-btn span {
+    font-size: 28px;
+    margin-top: 5px;
+  }
+  #editor-container {
+    display: none;
+    max-width: 800px;
+    margin: 20px auto;
+    background: #02442A;
+    padding: 20px;
+    border-radius: 8px;
+  }
+  .stretched-tile {
+    background: #222;
+    padding: 12px;
+    margin-bottom: 15px;
+    text-align: center;
+    font-weight: bold;
+    border-radius: 4px;
+    word-break: break-all;
+  }
+  .section-header {
+    background: #444;
+    padding: 10px;
+    text-align: center;
+    font-weight: bold;
+    margin-top: 15px;
+  }
+  .grid-3col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin: 10px 0;
+  }
+  .input-field {
+    display: flex;
+    flex-direction: column;
+  }
+  .input-field label {
+    font-size: 12px;
+    color: #90EE90;
+    margin-bottom: 2px;
+  }
+  .input-field input {
+    padding: 8px;
+    border: none;
+    border-radius: 4px;
+    background: white;
+    color: black;
+  }
+  #submit-btn {
+    background-color: #87CEEB;
+    color: black;
+    width: 100%;
+    padding: 15px;
+    font-size: 18px;
+    font-weight: bold;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 20px;
+  }
 </style>
 </head>
 <body>
@@ -35,7 +155,7 @@
 
 <div id="plus-container">
   <div id="plus-sign">＋</div>
-  <div id="status-message" style="font-size: 20px; margin-top: 10px; color: #90EE90;"></div>
+  <div id="queue-status" style="font-size: 20px; margin-top: 10px; color: #90EE90;"></div>
 </div>
 
 <div class="modal" id="uploadModal">
@@ -63,8 +183,6 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
   import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-  // Switched uploadBytes to uploadBytesResumable for chunk management
-  import { getStorage, ref as sRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
@@ -78,17 +196,15 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
-  const storage = getStorage(app);
 
   let currentType = '';
   let fileQueue = [];
   let currentFileIndex = 0;
-  let currentFileBlob = null;
+  let base64Data = '';
   let fileName = '';
 
   const modal = document.getElementById('uploadModal');
   const fileInput = document.getElementById('fileInput');
-  const submitBtn = document.getElementById('submit-btn');
 
   document.getElementById('plus-container').onclick = () => modal.style.display = 'flex';
   
@@ -101,6 +217,7 @@
     fileInput.click();
   };
 
+  // Build inputs dynamically
   const qGrid = document.getElementById('questionsGrid');
   const aGrid = document.getElementById('answersGrid');
   for(let i=1; i<=10; i++){
@@ -124,76 +241,46 @@
 
     const file = fileQueue[currentFileIndex];
     fileName = file.name;
-    currentFileBlob = file; 
     
+    // Clear out previous values for the new file entry
     for(let i=1; i<=10; i++) {
       document.getElementById(`q-${i}`).value = '';
       document.getElementById(`a-${i}`).value = '';
     }
 
     document.getElementById('fileNameTile').innerText = `File (${currentFileIndex + 1}/${fileQueue.length}): ` + fileName;
-    document.getElementById('plus-container').style.display = 'none';
-    document.getElementById('editor-container').style.display = 'block';
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      base64Data = event.target.result;
+      document.getElementById('plus-container').style.display = 'none';
+      document.getElementById('editor-container').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
   }
 
-  submitBtn.onclick = function() {
-    submitBtn.disabled = true;
-    submitBtn.innerText = "STARTING UPLOAD...";
+  document.getElementById('submit-btn').onclick = async function() {
+    let questions = [];
+    let answers = [];
+    for(let i=1; i<=10; i++) {
+      questions.push(document.getElementById(`q-${i}`).value);
+      answers.push(document.getElementById(`a-${i}`).value);
+    }
 
-    const storageRef = sRef(storage, `quiz_assets/${currentType}/${Date.now()}_${fileName}`);
+    const payload = {
+      name: fileName,
+      type: currentType,
+      data: base64Data,
+      questions: questions,
+      answers: answers,
+      timestamp: Date.now()
+    };
+
+    let targetRef = ref(db, "quizMedia/" + currentType);
+    await push(targetRef, payload);
     
-    // Using chunk data stream handler
-    const uploadTask = uploadBytesResumable(storageRef, currentFileBlob);
-
-    uploadTask.on('state_changed', 
-      (snapshot) => {
-        // Calculate progress percentage precisely
-        const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-        submitBtn.innerText = `UPLOADING: ${progress}%`;
-      }, 
-      (error) => {
-        console.error(error);
-        alert("Upload failed! Check connection or Firebase Storage bucket configuration.");
-        submitBtn.disabled = false;
-        submitBtn.innerText = "SUBMIT";
-      }, 
-      async () => {
-        // Success block triggered once upload hits 100%
-        try {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-
-          let questions = [];
-          let answers = [];
-          for(let i=1; i<=10; i++) {
-            questions.push(document.getElementById(`q-${i}`).value);
-            answers.push(document.getElementById(`a-${i}`).value);
-          }
-
-          const payload = {
-            name: fileName,
-            type: currentType,
-            data: downloadURL, 
-            questions: questions,
-            answers: answers,
-            timestamp: Date.now()
-          };
-
-          let targetRef = ref(db, "quizMedia/" + currentType);
-          await push(targetRef, payload);
-          
-          submitBtn.disabled = false;
-          submitBtn.innerText = "SUBMIT";
-          
-          currentFileIndex++;
-          processNextFile();
-        } catch (dbError) {
-          console.error(dbError);
-          alert("Storage succeeded but database entry failed.");
-          submitBtn.disabled = false;
-          submitBtn.innerText = "SUBMIT";
-        }
-      }
-    );
+    currentFileIndex++;
+    processNextFile();
   };
 </script>
 </body>
