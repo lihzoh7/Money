@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin Word Leaderboard</title>
+
+<style>
+body{
+  margin:0;
+  background:#001f3f;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+}
+
+#date, #timer{
+  font-size:42px;
+  margin:10px;
+  font-weight:bold;
+}
+
+#content{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:10px;
+  padding:10px;
+}
+
+.card{
+  background:#002b55;
+  padding:10px;
+  border-radius:10px;
+  font-size:18px;
+}
+
+.gold{ color:gold; }
+.silver{ color:silver; }
+.bronze{ color:#cd7f32; }
+.normal{ color:#ccc; }
+
+.line{
+  grid-column: span 3;
+  border-top:4px solid red;
+  margin:15px 0;
+}
+
+#resetBtn{
+  position:fixed;
+  bottom:10px;
+  right:10px;
+  color:red;
+  font-size:18px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div id="date"></div>
+<div id="timer"></div>
+
+<div id="content"></div>
+
+<div id="resetBtn">RESET / BREAK</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+  
+const app = initializeApp({
+  apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
+  databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app"
+});
+
+const db = getDatabase(app);
+const auth = getAuth(app);
+const content = document.getElementById("content");
+
+function updateTime(){
+  let now = new Date();
+
+  document.getElementById("date").innerText =
+    now.toLocaleDateString() + " " + now.toLocaleTimeString();
+
+  let end = new Date();
+
+  if(now.getHours() < 17){
+    end.setHours(17,30,0,0);
+  } else {
+    end.setDate(end.getDate()+1);
+    end.setHours(5,30,0,0);
+  }
+
+  let diff = end - now;
+
+  let h = Math.floor(diff/1000/60/60);
+  let m = Math.floor((diff/1000/60)%60);
+
+  document.getElementById("timer").innerText = `${h}H:${m}M`;
+}
+setInterval(updateTime,1000);
+
+/* LOAD CURRENT + HISTORY FOR WORDS LEADERBOARD */
+onValue(ref(db, "words/leaderboard"), snap => {
+  const all = snap.val() || {};
+
+  content.innerHTML = "";
+
+  const history = all.adminHistory || {};
+
+  Object.keys(history).sort().forEach(key => {
+    let round = history[key];
+    let arr = Object.values(round);
+
+    arr.sort((a,b)=>b.score-a.score);
+
+    arr.slice(0,6).forEach((p,i)=>{
+      drawCard(p,i);
+    });
+
+    let line = document.createElement("div");
+    line.className="line";
+    content.appendChild(line);
+  });
+
+  const current = all.current || {};
+
+  let arr = Object.values(current);
+  arr.sort((a,b)=>b.score-a.score);
+
+  arr.slice(0,6).forEach((p,i)=>{
+    drawCard(p,i);
+  });
+
+});
+
+function drawCard(p,i){
+  let cls = i===0?"gold":i===1?"silver":i===2?"bronze":"normal";
+  let date = new Date(p.timestamp).toLocaleString();
+
+  let div=document.createElement("div");
+  div.className="card "+cls;
+
+  div.innerHTML=`
+    <b>${p.name || ""} ${p.surname || ""}</b><br>
+    SCORE: ${p.score}<br>
+    <small>${date}</small>
+  `;
+
+  content.appendChild(div);
+}
+
+document.getElementById("resetBtn").onclick = async ()=>{
+  const uid = auth.currentUser?.uid;
+
+  if(!uid){
+    alert("Not logged in ❌");
+    return;
+  }
+
+  const adminSnap = await get(ref(db,"admins/"+uid));
+
+  if(!adminSnap.exists()){
+    alert("Not admin ❌");
+    return;
+  }
+
+  const snap = await get(ref(db, "words/leaderboard/current"));
+  const data = snap.val();
+
+  if(data){
+    await set(ref(db, "words/leaderboard/adminHistory/" + Date.now()), data);
+  }
+
+  await set(ref(db, "words/leaderboard/current"), null);
+};
+</script>
+
+</body>
+</html>
