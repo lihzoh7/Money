@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Uploaded Words</title>
+<style>
+  body {
+    margin: 0; background: #1a1a1a; color: white; font-family: Arial, sans-serif;
+    display: flex; flex-direction: column; align-items: center; padding: 20px;
+  }
+  h2 { margin-bottom: 20px; }
+  #wordsGrid {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+    width: 100%; max-width: 1100px; max-height: 80vh; overflow-y: auto;
+    background: #2a2a2a; padding: 15px; border-radius: 10px; box-sizing: border-box;
+  }
+  .word-card {
+    background: #333; padding: 8px 10px; border-radius: 6px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; border: 1px solid #444;
+  }
+  .word-num { color: #888; font-weight: bold; margin-right: 4px; }
+  .word-text { font-weight: bold; color: #00d4ff; flex-grow: 1; }
+  .found-count { background: #0074D9; padding: 2px 6px; border-radius: 10px; font-size: 11px; margin-right: 6px; }
+  .trash-icon { cursor: pointer; color: #ff4136; font-weight: bold; font-size: 14px; }
+  .trash-icon:hover { color: #ff7066; }
+</style>
+</head>
+<body>
+
+<h2>UPLOADED WORDS</h2>
+
+<div id="wordsGrid"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
+  databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+
+onAuthStateChanged(auth, (u) => {
+  if (!u) location.href = "index.html";
+});
+
+const wordsGrid = document.getElementById("wordsGrid");
+
+// Listen for updates to wordsList and word counts
+onValue(ref(db, "words"), (snap) => {
+  const data = snap.val() || {};
+  const list = data.wordsList || {};
+  const counts = data.wordsListCount || {};
+
+  wordsGrid.innerHTML = "";
+
+  let entries = Object.entries(list);
+  entries.forEach(([key, item], index) => {
+    let wordStr = typeof item === "string" ? item : item.word;
+    let foundNum = counts[wordStr] || 0;
+
+    let card = document.createElement("div");
+    card.className = "word-card";
+
+    card.innerHTML = `
+      <span><span class="word-num">${index + 1}.</span> <span class="word-text">${wordStr}</span></span>
+      <span style="display:flex; align-items:center;">
+        <span class="found-count">🔍 ${foundNum}</span>
+        <span class="trash-icon" title="Delete Word">🗑️</span>
+      </span>
+    `;
+
+    card.querySelector(".trash-icon").onclick = async () => {
+      if (confirm(`Delete "${wordStr}" from system?`)) {
+        await remove(ref(db, `words/wordsList/${key}`));
+      }
+    };
+
+    wordsGrid.appendChild(card);
+  });
+});
+</script>
+</body>
+</html>
