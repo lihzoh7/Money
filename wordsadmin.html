@@ -2,44 +2,143 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Words Admin - Word Upload</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Words Admin - Quick Add & Manage</title>
 <style>
   body {
-    margin: 0; background: #1a1a1a; color: white; font-family: Arial, sans-serif;
-    display: flex; flex-direction: column; align-items: center; padding: 20px;
+    margin: 0;
+    background: #1a1a1a;
+    color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
   }
-  #header {
-    width: 100%; max-width: 900px; display: flex; justify-content: space-between;
-    align-items: center; margin-bottom: 20px;
+
+  h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
   }
-  #toggleBtn {
-    background: #0074D9; color: white; border: none; padding: 12px 30px;
-    font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer;
+
+  /* INPUT AREA AT TOP CENTER */
+  #inputSection {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    width: 100%;
+    max-width: 500px;
+    justify-content: center;
   }
-  #gridContainer {
-    display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
-    width: 100%; max-width: 900px; max-height: 75vh; overflow-y: auto;
-    background: #2a2a2a; padding: 15px; border-radius: 10px; box-sizing: border-box;
+
+  #wordInput {
+    flex: 1;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #333;
+    color: white;
+    text-transform: uppercase;
+    outline: none;
   }
-  input.word-input {
-    width: 100%; padding: 6px; box-sizing: border-box; background: #333;
-    color: white; border: 1px solid #555; border-radius: 4px; text-transform: uppercase;
+
+  #wordInput:focus {
+    border-color: #0074D9;
   }
-  input.word-input:disabled { background: #222; color: #888; border-color: #333; }
+
+  #submitBtn {
+    padding: 12px 24px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  #submitBtn:hover {
+    background: #218838;
+  }
+
+  /* 5-COLUMN GRID FOR WORDS */
+  #wordsGrid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    width: 100%;
+    max-width: 950px;
+    max-height: 70vh;
+    overflow-y: auto;
+    background: #2a2a2a;
+    padding: 15px;
+    border-radius: 10px;
+    box-sizing: border-box;
+  }
+
+  /* INDIVIDUAL WORD CARD */
+  .word-card {
+    background: #333;
+    border: 1px solid #444;
+    padding: 10px 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+  }
+
+  .word-text {
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    word-break: break-all;
+    text-transform: uppercase;
+    padding-right: 5px;
+  }
+
+  .delete-btn {
+    background: transparent;
+    border: none;
+    color: #ff4d4d;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+
+  .delete-btn:hover {
+    background: rgba(255, 77, 77, 0.2);
+  }
+
+  /* Responsive adjustment for small screens */
+  @media (max-width: 650px) {
+    #wordsGrid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
 </style>
 </head>
 <body>
 
-<div id="header">
-  <h2>WORDS ADMIN PANEL</h2>
-  <button id="toggleBtn">EDIT</button>
+<h2>WORDS ADMIN PANEL</h2>
+
+<!-- TOP INPUT & SUBMIT BUTTON -->
+<div id="inputSection">
+  <input type="text" id="wordInput" placeholder="Enter word..." autocomplete="off">
+  <button id="submitBtn">SUBMIT</button>
 </div>
 
-<div id="gridContainer"></div>
+<!-- 5-COLUMN CONTAINER -->
+<div id="wordsGrid"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getDatabase, ref, push, remove, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -51,81 +150,107 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 
-let isEditing = false;
-const gridContainer = document.getElementById("gridContainer");
-const toggleBtn = document.getElementById("toggleBtn");
+const wordInput = document.getElementById("wordInput");
+const submitBtn = document.getElementById("submitBtn");
+const wordsGrid = document.getElementById("wordsGrid");
 
-onAuthStateChanged(auth, async (u) => {
-  if(!u) { location.href = "index.html"; return; }
-  const adminSnap = await get(ref(db, "admins/" + u.uid));
-  if(!adminSnap.exists()){
-    alert("Admin privileges required.");
-    location.href = "main-menu.html";
-    return;
+/* AUTH CHECK */
+onAuthStateChanged(auth, (u) => {
+  if (!u) { 
+    location.href = "index.html"; 
+    return; 
   }
-  buildInputGrid();
-  loadWords();
+  // Real-time listener for database words list
+  listenToWords();
 });
 
-function buildInputGrid() {
-  gridContainer.innerHTML = "";
-  for (let i = 0; i < 350; i++) { // 5x70 = 350 fields
-    let input = document.createElement("input");
-    input.type = "text";
-    input.className = "word-input";
-    input.id = "field-" + i;
-    input.disabled = true;
-    gridContainer.appendChild(input);
+/* REAL-TIME LISTEN & RENDER WORDS */
+function listenToWords() {
+  const wordsRef = ref(db, "words/wordsList");
+  
+  onValue(wordsRef, (snapshot) => {
+    wordsGrid.innerHTML = "";
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      
+      // Iterate through Firebase keys & values
+      Object.entries(data).forEach(([key, value]) => {
+        const wordString = typeof value === "string" ? value : value.word;
+        if (wordString) {
+          createWordTile(key, wordString);
+        }
+      });
+    } else {
+      wordsGrid.innerHTML = "<div style='grid-column: span 5; text-align:center; color:#888;'>No words added yet.</div>";
+    }
+  });
+}
+
+/* RENDER TILE WITH TRASH BIN */
+function createWordTile(key, word) {
+  const card = document.createElement("div");
+  card.className = "word-card";
+
+  const span = document.createElement("span");
+  span.className = "word-text";
+  span.innerText = word.toUpperCase();
+
+  const delBtn = document.createElement("button");
+  delBtn.className = "delete-btn";
+  delBtn.innerHTML = "🗑️";
+  delBtn.title = "Delete Word";
+  delBtn.onclick = () => deleteWord(key);
+
+  card.appendChild(span);
+  card.appendChild(delBtn);
+  wordsGrid.appendChild(card);
+}
+
+/* ADD NEW WORD TO FIREBASE */
+async function addWord() {
+  const val = wordInput.value.trim().toUpperCase();
+  if (val.length < 2) {
+    alert("Please enter a valid word (at least 2 letters).");
+    return;
+  }
+
+  submitBtn.disabled = true;
+  
+  try {
+    const wordsRef = ref(db, "words/wordsList");
+    // Using push ensures unique key generation without full object overrides
+    await push(wordsRef, { word: val });
+    wordInput.value = "";
+    wordInput.focus();
+  } catch (error) {
+    console.error("Error adding word:", error);
+    alert("Failed to submit word.");
+  } finally {
+    submitBtn.disabled = false;
   }
 }
 
-async function loadWords() {
-  const snap = await get(ref(db, "words/wordsList"));
-  if (snap.exists()) {
-    let data = snap.val();
-    let wordArr = Object.values(data).map(item => typeof item === "string" ? item : item.word);
-    wordArr.forEach((w, idx) => {
-      let input = document.getElementById("field-" + idx);
-      if (input) input.value = w;
-    });
+/* DELETE WORD FROM FIREBASE BY KEY */
+async function deleteWord(key) {
+  if (confirm("Delete this word?")) {
+    try {
+      await remove(ref(db, `words/wordsList/${key}`));
+    } catch (e) {
+      console.error("Error deleting:", e);
+      alert("Failed to delete word.");
+    }
   }
 }
 
-toggleBtn.onclick = async () => {
-  if (!isEditing) {
-    // Switch to EDIT mode
-    isEditing = true;
-    toggleBtn.innerText = "SUBMIT";
-    toggleBtn.style.background = "#28a745";
-    document.querySelectorAll(".word-input").forEach(i => i.disabled = false);
-  } else {
-    // SUBMIT data
-    toggleBtn.innerText = "SAVING...";
-    toggleBtn.disabled = true;
+/* EVENT LISTENERS */
+submitBtn.addEventListener("click", addWord);
 
-    let wordMap = {};
-    let inputs = document.querySelectorAll(".word-input");
-    let count = 0;
-
-    inputs.forEach((input) => {
-      let val = input.value.trim().toUpperCase();
-      if (val.length >= 2) {
-        let key = "word_" + count;
-        wordMap[key] = { word: val };
-        count++;
-      }
-    });
-
-    await set(ref(db, "words/wordsList"), wordMap);
-    alert(`Successfully saved ${count} words!`);
-
-    isEditing = false;
-    toggleBtn.innerText = "EDIT";
-    toggleBtn.style.background = "#0074D9";
-    toggleBtn.disabled = false;
-    document.querySelectorAll(".word-input").forEach(i => i.disabled = true);
+wordInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    addWord();
   }
-};
+});
 </script>
+
 </body>
 </html>
