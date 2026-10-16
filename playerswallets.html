@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADMIN WALLET - MUUSTANDI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #001f3f;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 950px;
+      background: #001428;
+      border: 1px solid #004080;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    }
+    h2 {
+      color: #ffcc00;
+      text-align: center;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+    .player-card {
+      background: #002244;
+      border: 1px solid #0055a5;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .player-header {
+      padding: 15px;
+      background: #003366;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .player-header:hover {
+      background: #004080;
+    }
+    .player-info span {
+      display: inline-block;
+      margin-right: 15px;
+    }
+    .id-tag {
+      color: #00f0ff;
+      font-size: 13px;
+    }
+    .toggle-icon {
+      color: #ffcc00;
+      font-size: 18px;
+    }
+    .details-panel {
+      display: none;
+      padding: 15px;
+      background: #001020;
+      border-top: 1px solid #004080;
+    }
+    .details-panel.open {
+      display: block;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 5px;
+    }
+    th {
+      background: #002244;
+      color: #00f0ff;
+      padding: 10px;
+      font-size: 13px;
+      border: 1px solid #004080;
+    }
+    td {
+      padding: 10px;
+      font-size: 13px;
+      border: 1px solid #004080;
+      text-align: center;
+      background: #001830;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Admin Wallet - Credited Players</h2>
+  <div id="playersList">Loading players...</div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
+    authDomain: "tose-ccf8f.firebaseapp.com",
+    databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "tose-ccf8f",
+    storageBucket: "tose-ccf8f.appspot.com"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const playersList = document.getElementById("playersList");
+
+  async function loadAdminData() {
+    const usersSnap = await get(ref(db, "users"));
+    const txSnap = await get(ref(db, "transactions"));
+
+    const users = usersSnap.val() || {};
+    const transactions = txSnap.val() || {};
+
+    const uidsWithTx = Object.keys(transactions);
+
+    if (uidsWithTx.length === 0) {
+      playersList.innerHTML = `<div style="text-align:center; padding: 20px; color: #88aacc;">No player credit transactions found.</div>`;
+      return;
+    }
+
+    playersList.innerHTML = "";
+
+    uidsWithTx.forEach(uid => {
+      const user = users[uid] || {};
+      const firstName = user.name || "Unknown";
+      const lastName = user.surname || "Player";
+      const idNumber = user.idNumber || user.id || uid;
+
+      const userTxObj = transactions[uid] || {};
+      const userTxList = Object.values(userTxObj).sort((a, b) => new Date(b.requestTime) - new Date(a.requestTime));
+
+      const card = document.createElement("div");
+      card.className = "player-card";
+
+      card.innerHTML = `
+        <div class="player-header" onclick="togglePlayer('${uid}')">
+          <div class="player-info">
+            <span>👤 ${firstName} ${lastName}</span>
+            <span class="id-tag">ID: ${idNumber}</span>
+          </div>
+          <div class="toggle-icon" id="icon-${uid}">▼</div>
+        </div>
+        <div class="details-panel" id="panel-${uid}">
+          <table>
+            <thead>
+              <tr>
+                <th colspan="2">REQUEST</th>
+                <th>GRANTED</th>
+                <th>STATUS</th>
+              </tr>
+              <tr>
+                <th>Amount</th>
+                <th>Date & Time</th>
+                <th>Date & Time</th>
+                <th>State</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${userTxList.map(tx => `
+                <tr>
+                  <td style="color: #00f0ff; font-weight:bold;">R ${(Number(tx.amount) || 0).toFixed(2)}</td>
+                  <td>${tx.requestTime ? new Date(tx.requestTime).toLocaleString() : 'N/A'}</td>
+                  <td>${tx.grantedTime ? new Date(tx.grantedTime).toLocaleString() : 'N/A'}</td>
+                  <td style="color: #a8ffbf;">${tx.status || 'GRANTED'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      playersList.appendChild(card);
+    });
+  }
+
+  window.togglePlayer = function(uid) {
+    const panel = document.getElementById(`panel-${uid}`);
+    const icon = document.getElementById(`icon-${uid}`);
+    if (panel.classList.contains("open")) {
+      panel.classList.remove("open");
+      icon.textContent = "▼";
+    } else {
+      panel.classList.add("open");
+      icon.textContent = "▲";
+    }
+  };
+
+  loadAdminData();
+</script>
+
+</body>
+</html>
