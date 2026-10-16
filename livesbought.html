@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADMIN LIVES BOUGHT - MUUSTANDI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #001f3f;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 950px;
+      background: #001428;
+      border: 1px solid #004080;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    }
+    h2 {
+      color: #ff668e;
+      text-align: center;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+    .player-card {
+      background: #002244;
+      border: 1px solid #0055a5;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .player-header {
+      padding: 15px;
+      background: #331020;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .player-header:hover {
+      background: #4a1830;
+    }
+    .player-info span {
+      display: inline-block;
+      margin-right: 15px;
+    }
+    .id-tag {
+      color: #ff88a5;
+      font-size: 13px;
+    }
+    .toggle-icon {
+      color: #ff668e;
+      font-size: 18px;
+    }
+    .details-panel {
+      display: none;
+      padding: 15px;
+      background: #001020;
+      border-top: 1px solid #004080;
+    }
+    .details-panel.open {
+      display: block;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 5px;
+    }
+    th {
+      background: #451d27;
+      color: #ff88a5;
+      padding: 10px;
+      font-size: 13px;
+      border: 1px solid #004080;
+    }
+    td {
+      padding: 10px;
+      font-size: 13px;
+      border: 1px solid #004080;
+      text-align: center;
+      background: #001830;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Admin Lives Bought</h2>
+  <div id="livesList">Loading lives purchases...</div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
+    authDomain: "tose-ccf8f.firebaseapp.com",
+    databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "tose-ccf8f",
+    storageBucket: "tose-ccf8f.appspot.com"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const livesList = document.getElementById("livesList");
+
+  async function loadLivesData() {
+    const usersSnap = await get(ref(db, "users"));
+    const purchasesSnap = await get(ref(db, "lives_purchases"));
+
+    const users = usersSnap.val() || {};
+    const purchases = purchasesSnap.val() || {};
+
+    const uids = Object.keys(purchases);
+
+    if (uids.length === 0) {
+      livesList.innerHTML = `<div style="text-align:center; padding: 20px; color: #88aacc;">No lives purchase history found.</div>`;
+      return;
+    }
+
+    livesList.innerHTML = "";
+
+    uids.forEach(uid => {
+      const user = users[uid] || {};
+      const firstName = user.name || "Unknown";
+      const lastName = user.surname || "Player";
+      const idNumber = user.idNumber || user.id || uid;
+
+      const userRawList = Object.values(purchases[uid] || {}).sort((a, b) => new Date(a.time) - new Date(b.time));
+
+      // 10-Second Batch Aggregation Algorithm
+      const aggregated = [];
+      userRawList.forEach(item => {
+        const itemTime = new Date(item.time).getTime();
+        if (aggregated.length === 0) {
+          aggregated.push({ lives: item.count || 1, startTime: item.time, timestamp: itemTime });
+        } else {
+          const lastGroup = aggregated[aggregated.length - 1];
+          if (itemTime - lastGroup.timestamp <= 10000) {
+            lastGroup.lives += (item.count || 1);
+          } else {
+            aggregated.push({ lives: item.count || 1, startTime: item.time, timestamp: itemTime });
+          }
+        }
+      });
+
+      aggregated.sort((a, b) => b.timestamp - a.timestamp);
+
+      const card = document.createElement("div");
+      card.className = "player-card";
+
+      card.innerHTML = `
+        <div class="player-header" onclick="togglePlayer('${uid}')">
+          <div class="player-info">
+            <span>❤️ ${firstName} ${lastName}</span>
+            <span class="id-tag">ID: ${idNumber}</span>
+          </div>
+          <div class="toggle-icon" id="icon-${uid}">▼</div>
+        </div>
+        <div class="details-panel" id="panel-${uid}">
+          <table>
+            <thead>
+              <tr>
+                <th>LIVES BOUGHT</th>
+                <th>DATE & TIME</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${aggregated.map(row => `
+                <tr>
+                  <td style="color: #ff668e; font-weight: bold;">❤️ ${row.lives}</td>
+                  <td>${new Date(row.startTime).toLocaleString()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      livesList.appendChild(card);
+    });
+  }
+
+  window.togglePlayer = function(uid) {
+    const panel = document.getElementById(`panel-${uid}`);
+    const icon = document.getElementById(`icon-${uid}`);
+    if (panel.classList.contains("open")) {
+      panel.classList.remove("open");
+      icon.textContent = "▼";
+    } else {
+      panel.classList.add("open");
+      icon.textContent = "▲";
+    }
+  };
+
+  loadLivesData();
+</script>
+
+</body>
+</html>
