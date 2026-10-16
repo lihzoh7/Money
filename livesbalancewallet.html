@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LIVES BALANCE - MUUSTANDI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #001f3f;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 900px;
+      background: #001428;
+      border: 1px solid #004080;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    }
+    h2 {
+      color: #00f0ff;
+      text-align: center;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+    .tabs-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+    .date-tab {
+      width: 100%;
+      background: #12344b;
+      border: 1px solid #00f0ff;
+      border-radius: 8px;
+      padding: 14px 18px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .date-tab:hover {
+      background: #1a4968;
+      box-shadow: 0 0 10px rgba(0,240,255,0.4);
+    }
+    .tab-header {
+      font-size: 16px;
+      font-weight: bold;
+      color: #b8edff;
+      margin-bottom: 10px;
+      border-bottom: 1px solid rgba(0,240,255,0.2);
+      padding-bottom: 6px;
+    }
+    .tab-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 15px;
+      font-weight: bold;
+    }
+    .lives-left {
+      color: #ff668e;
+    }
+    .cost-right {
+      color: #a8ffbf;
+    }
+    .empty-msg {
+      text-align: center;
+      padding: 30px;
+      color: #88aacc;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Lives Balance Calendar</h2>
+  <div class="tabs-container" id="tabsContainer">Loading transaction calendar...</div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
+    authDomain: "tose-ccf8f.firebaseapp.com",
+    databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "tose-ccf8f",
+    storageBucket: "tose-ccf8f.appspot.com"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const tabsContainer = document.getElementById("tabsContainer");
+
+  async function loadBalanceCalendar() {
+    const purchasesSnap = await get(ref(db, "lives_purchases"));
+    const purchases = purchasesSnap.val() || {};
+
+    const dailyTotals = {};
+
+    Object.values(purchases).forEach(userPurchases => {
+      Object.values(userPurchases).forEach(item => {
+        if (item.time) {
+          const dateStr = new Date(item.time).toISOString().split('T')[0];
+          const count = item.count || 1;
+
+          if (!dailyTotals[dateStr]) {
+            dailyTotals[dateStr] = 0;
+          }
+          dailyTotals[dateStr] += count;
+        }
+      });
+    });
+
+    const sortedDates = Object.keys(dailyTotals).sort((a, b) => new Date(b) - new Date(a));
+
+    if (sortedDates.length === 0) {
+      tabsContainer.innerHTML = `<div class="empty-msg">No life purchases recorded yet.</div>`;
+      return;
+    }
+
+    tabsContainer.innerHTML = "";
+
+    sortedDates.forEach(dateStr => {
+      const totalLives = dailyTotals[dateStr];
+      const totalCost = (totalLives * 0.50).toFixed(2);
+      const formattedDate = new Date(dateStr).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      const tab = document.createElement("div");
+      tab.className = "date-tab";
+
+      tab.innerHTML = `
+        <div class="tab-header">📅 ${formattedDate}</div>
+        <div class="tab-footer">
+          <span class="lives-left">Lives Bought = ${totalLives}</span>
+          <span class="cost-right">Cost = R ${totalCost}</span>
+        </div>
+      `;
+
+      tabsContainer.appendChild(tab);
+    });
+  }
+
+  loadBalanceCalendar();
+</script>
+
+</body>
+</html>
