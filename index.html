@@ -64,10 +64,8 @@ body {
 
 /* HEADER NAVIGATION BAR */
 .panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 15px;
+  text-align: center;
+  padding: 15px;
   background: #00152b;
   border-radius: 8px;
   margin-bottom: 15px;
@@ -75,42 +73,55 @@ body {
 }
 
 .panel-title {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: bold;
   letter-spacing: 1px;
-}
-
-.nav-arrow {
-  font-size: 28px;
-  color: #3b82f6;
-  cursor: pointer;
-  text-decoration: none;
-  transition: transform 0.2s, color 0.2s;
-  user-select: none;
-}
-
-.nav-arrow:hover {
+  margin-bottom: 15px;
   color: #60a5fa;
-  transform: scale(1.1);
 }
 
-/* PANELS (Grid view configurations) */
-#panelAdmin, #panelQuizer, #panelWordz {
+/* TOP NAVIGATION TABS ROW */
+.nav-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nav-tab-btn {
+  padding: 10px 20px;
+  background: #002244;
+  color: white;
+  border: 1px solid #3b82f6;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 15sxx;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.nav-tab-btn:hover {
+  background: #004080;
+  transform: translateY(-2px);
+}
+
+.nav-tab-btn.active {
+  background: #3b82f6;
+}
+
+/* PANELS (3-Column Grid view configurations) */
+.view-panel {
+  display: none;
   background: #001f3f;
   padding: 15px;
   border-radius: 8px;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 
-/* View Control Toggles */
-.view-panel {
-  display: none !important;
-}
 .view-panel.active {
-  display: flex !important;
+  display: grid;
 }
 
 /* STRETCHING TILES */
@@ -121,7 +132,7 @@ body {
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   letter-spacing: 1px;
   cursor: pointer;
@@ -129,6 +140,9 @@ body {
   border: 1px solid transparent;
   transition: background 0.2s, border-color 0.2s, transform 0.1s;
   width: 100%;
+  text-align: center;
+  padding: 0 5px;
+  box-sizing: border-box;
 }
 
 .tile:hover {
@@ -156,11 +170,16 @@ body {
 <div id="mainWrapper">
 
   <div class="panel-header">
-    <div id="headerTitle" class="panel-title">ADMIN PANEL</div>
-    <div id="toggleArrow" class="nav-arrow" onclick="toggleViews()">➜</div>
+    <div class="panel-title">ADMIN</div>
+    <div class="nav-tabs">
+      <button class="nav-tab-btn active" onclick="switchPanel('panelAdmin', this)">SLIDE</button>
+      <button class="nav-tab-btn" onclick="switchPanel('panelQuizer', this)">QUIZER</button>
+      <button class="nav-tab-btn" onclick="switchPanel('panelWordz', this)">WORDZ</button>
+      <button class="nav-tab-btn" onclick="switchPanel('panelGeneral', this)">GENERAL</button>
+    </div>
   </div>
 
-  <!-- PANEL 1: ADMIN -->
+  <!-- PANEL 1: SLIDE (Admin Panel) -->
   <div id="panelAdmin" class="view-panel active">
     <div class="tile" onclick="go('admin-prizes.html')">PRIZES</div>
     <div class="tile" onclick="go('pop-up-admin.html')">POP UP</div>
@@ -188,23 +207,37 @@ body {
     <div class="tile" onclick="go('wordsadmin.html')">ADMIN</div>
     <div class="tile" onclick="go('wordsuploaded.html')">CAHER</div>
     <div class="tile" onclick="go('tri.html')">SAVER</div>
+    <div class="tile" onclick="go('test1.html')">Test1</div>
+    <div class="tile" onclick="go('test2.html')">Test2</div>
+    <div class="tile" onclick="go('test3.html')">Test3</div>
+  </div>
+
+  <!-- PANEL 4: GENERAL -->
+  <div id="panelGeneral" class="view-panel">
+    <div class="tile" onclick="go('general-a.html')">A</div>
+    <div class="tile" onclick="go('general-b.html')">B</div>
+    <div class="tile" onclick="go('general-c.html')">C</div>
+    <div class="tile" onclick="go('general-d.html')">D</div>
+    <div class="tile" onclick="go('general-e.html')">E</div>
+    <div class="tile" onclick="go('general-f.html')">F</div>
+    <div class="tile" onclick="go('general-g.html')">G</div>
   </div>
 
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
+import {  
+  getAuth,  
+  signInWithEmailAndPassword,  
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-import { 
-  getDatabase, 
-  ref, 
-  get 
+import {  
+  getDatabase,  
+  ref,  
+  get  
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
 /* INIT */
@@ -274,33 +307,19 @@ function showPanel(){
   document.getElementById("mainWrapper").style.display = "block";
 }
 
-/* 3-WAY VIEW SWITCHER LOGIC */
-window.toggleViews = function() {
-  const adminPanel = document.getElementById("panelAdmin");
-  const quizerPanel = document.getElementById("panelQuizer");
-  const wordzPanel = document.getElementById("panelWordz");
-  const headerTitle = document.getElementById("headerTitle");
-  const arrow = document.getElementById("toggleArrow");
+/* TAB SWITCHER LOGIC */
+window.switchPanel = function(panelId, btnElement) {
+  // Hide all panels
+  const panels = document.querySelectorAll(".view-panel");
+  panels.forEach(panel => panel.classList.remove("active"));
 
-  if(adminPanel.classList.contains("active")) {
-    // Switch from Admin to Quizer
-    adminPanel.classList.remove("active");
-    quizerPanel.classList.add("active");
-    headerTitle.innerText = "QUIZER";
-    arrow.innerText = "➜";
-  } else if(quizerPanel.classList.contains("active")) {
-    // Switch from Quizer to Wordz
-    quizerPanel.classList.remove("active");
-    wordzPanel.classList.add("active");
-    headerTitle.innerText = "WORDZ";
-    arrow.innerText = "↩";
-  } else {
-    // Switch from Wordz back to Admin
-    wordzPanel.classList.remove("active");
-    adminPanel.classList.add("active");
-    headerTitle.innerText = "ADMIN PANEL";
-    arrow.innerText = "➜";
-  }
+  // Remove active class from all navigation buttons
+  const buttons = document.querySelectorAll(".nav-tab-btn");
+  buttons.forEach(btn => btn.classList.remove("active"));
+
+  // Show target panel and highlight clicked button
+  document.getElementById(panelId).classList.add("active");
+  btnElement.classList.add("active");
 }
 
 /* NAVIGATION */
