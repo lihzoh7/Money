@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin - Slide Winners Management</title>
+<title>Admin - Winners Management</title>
 
 <style>
 body {
@@ -209,7 +209,7 @@ body {
 <body>
 
   <div class="header-bar">
-    <div class="header-title">SLIDE WINNERS MANAGEMENT</div>
+    <div class="header-title">WINNERS MANAGEMENT</div>
     <div class="plus-btn" title="Upload Winner Image" onclick="triggerFileSelect()">+</div>
   </div>
 
@@ -234,7 +234,6 @@ body {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getDatabase, ref, set, get, push, remove, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -249,10 +248,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const storage = getStorage(app);
 const auth = getAuth(app);
 
-let selectedFile = null;
+let base64ImageString = "";
 let activeWinnerId = null;
 
 onAuthStateChanged(auth, async (u) => {
@@ -276,12 +274,12 @@ window.triggerFileSelect = function() {
 window.handleFileSelected = function(event) {
   const file = event.target.files[0];
   if (!file) return;
-  selectedFile = file;
 
   const reader = new FileReader();
   reader.onload = function(e) {
-    document.getElementById("previewImg").src = e.target.result;
-    
+    base64ImageString = e.target.result;
+    document.getElementById("previewImg").src = base64ImageString;
+
     // Auto populate current date time format: dd,mm,yyyy; hh:mm
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, '0');
@@ -302,19 +300,18 @@ window.uploadWinnerData = async function() {
     alert("Please enter date and time.");
     return;
   }
+  if (!base64ImageString) {
+    alert("No image selected.");
+    return;
+  }
 
   try {
-    document.querySelector(".submit-tab-btn").innerText = "UPLOADING...";
-    
-    const storagePath = `slideWinners/${Date.now()}_${selectedFile.name}`;
-    const fileRef = sRef(storage, storagePath);
-    await uploadBytes(fileRef, selectedFile);
-    const downloadUrl = await getDownloadURL(fileRef);
+    document.querySelector(".submit-tab-btn").innerText = "SAVING...";
 
     const newWinnerRef = push(ref(db, "slideWinners"));
     await set(newWinnerRef, {
       id: newWinnerRef.key,
-      imageUrl: downloadUrl,
+      imageUrl: base64ImageString,
       dateTime: dateTimeVal,
       createdAt: Date.now()
     });
@@ -322,9 +319,10 @@ window.uploadWinnerData = async function() {
     document.getElementById("uploadModal").style.display = "none";
     document.getElementById("fileInput").value = "";
     document.querySelector(".submit-tab-btn").innerText = "SUBMIT";
+    base64ImageString = "";
   } catch (error) {
     console.error(error);
-    alert("Upload failed: " + error.message);
+    alert("Save failed: " + error.message);
     document.querySelector(".submit-tab-btn").innerText = "SUBMIT";
   }
 };
@@ -335,7 +333,7 @@ function loadWinnersData() {
 
   onValue(activeRef, (activeSnap) => {
     activeWinnerId = activeSnap.val() || null;
-    
+
     onValue(winnersRef, (snapshot) => {
       const container = document.getElementById("winnersContainer");
       container.innerHTML = "";
@@ -355,7 +353,7 @@ function loadWinnersData() {
 
       list.forEach((item) => {
         const isOpenActive = (item.id === activeWinnerId);
-        const isClosedActive = !isOpenActive; // Red when closed/hidden from players
+        const isClosedActive = !isOpenActive;
 
         const card = document.createElement("div");
         card.className = "winner-card";
@@ -372,7 +370,7 @@ function loadWinnersData() {
         `;
         container.appendChild(card);
       });
-    }, { onlyOnce: true });
+    });
   });
 }
 
@@ -390,7 +388,6 @@ window.setWinnerActive = async function(id, makeVisible) {
         await set(ref(db, "slideWinnersState/activeWinnerId"), id);
       }
     } else {
-      // If hiding the currently active one
       if (id === activeWinnerId) {
         await set(ref(db, "slideWinnersState/activeWinner"), { visible: false });
         await set(ref(db, "slideWinnersState/activeWinnerId"), null);
