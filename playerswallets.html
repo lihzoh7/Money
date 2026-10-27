@@ -1,204 +1,448 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ADMIN WALLET - MUUSTANDI</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      min-height: 100vh;
-      padding: 20px;
-      font-family: Arial, sans-serif;
-      background: #001f3f;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .container {
-      width: 100%;
-      max-width: 950px;
-      background: #001428;
-      border: 1px solid #004080;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.5);
-    }
-    h2 {
-      color: #ffcc00;
-      text-align: center;
-      margin-bottom: 20px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-    }
-    .player-card {
-      background: #002244;
-      border: 1px solid #0055a5;
-      border-radius: 8px;
-      margin-bottom: 12px;
-      overflow: hidden;
-    }
-    .player-header {
-      padding: 15px;
-      background: #003366;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background 0.2s;
-    }
-    .player-header:hover {
-      background: #004080;
-    }
-    .player-info span {
-      display: inline-block;
-      margin-right: 15px;
-    }
-    .id-tag {
-      color: #00f0ff;
-      font-size: 13px;
-    }
-    .toggle-icon {
-      color: #ffcc00;
-      font-size: 18px;
-    }
-    .details-panel {
-      display: none;
-      padding: 15px;
-      background: #001020;
-      border-top: 1px solid #004080;
-    }
-    .details-panel.open {
-      display: block;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 5px;
-    }
-    th {
-      background: #002244;
-      color: #00f0ff;
-      padding: 10px;
-      font-size: 13px;
-      border: 1px solid #004080;
-    }
-    td {
-      padding: 10px;
-      font-size: 13px;
-      border: 1px solid #004080;
-      text-align: center;
-      background: #001830;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - Player Deposits Directory</title>
+
+<style>
+body {
+  margin: 0;
+  background: black;
+  font-family: Arial, sans-serif;
+  color: white;
+  padding: 20px;
+}
+
+/* HEADER BAR */
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto 20px auto;
+  border-bottom: 2px solid #003366;
+  padding-bottom: 10px;
+}
+
+.header-title {
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+/* THREE COLUMNS GRID */
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .players-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* PLAYER TILE */
+.player-tile {
+  background: #001f3f;
+  border: 1px solid #003366;
+  border-radius: 8px;
+  padding: 15px;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s, background 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.player-tile:hover {
+  transform: translateY(-3px);
+  border-color: #3b82f6;
+  background: #002a54;
+}
+
+.label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #3b82f6;
+  display: block;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.name-value {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.id-value {
+  font-size: 14px;
+  color: #c8eaff;
+}
+
+/* FULL VIEW MODAL */
+#modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.modal-card {
+  background: #111;
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  padding: 25px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.4);
+  position: relative;
+  box-sizing: border-box;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #222;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #3b82f6;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.close-btn {
+  background: #ff4136;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* TWO COLUMNS FOR DATE TABS INSIDE FULL VIEW */
+.date-tabs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+@media (max-width: 600px) {
+  .date-tabs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* DATE TAB */
+.date-tab {
+  background: #002244;
+  border: 1px solid #0055a5;
+  border-radius: 8px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.date-tab-header {
+  font-size: 15px;
+  font-weight: bold;
+  color: #ffcc00;
+  border-bottom: 1px solid #004080;
+  padding-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+/* AMOUNT ICONS */
+.amounts-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.amount-icon {
+  background: #004080;
+  border: 1px solid #00f0ff;
+  color: #00f0ff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.amount-icon:hover {
+  background: #0060c0;
+  transform: translateY(-2px);
+}
+
+.daily-total {
+  margin-top: auto;
+  font-size: 13px;
+  color: #a8ffbf;
+  font-weight: bold;
+  border-top: 1px dashed #004080;
+  padding-top: 8px;
+}
+
+/* TIMESTAMP POPUP */
+#timestampModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.timestamp-card {
+  background: #1a1a1a;
+  border: 2px solid #00f0ff;
+  border-radius: 10px;
+  padding: 20px 30px;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+}
+
+.timestamp-card .time-val {
+  font-size: 22px;
+  font-weight: bold;
+  color: #00f0ff;
+  margin-bottom: 5px;
+}
+
+.timestamp-card .date-val {
+  font-size: 15px;
+  color: #ccc;
+  margin-bottom: 15px;
+}
+
+.timestamp-close {
+  background: #004080;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+</style>
 </head>
 <body>
 
-<div class="container">
-  <h2>Admin Wallet - Credited Players</h2>
-  <div id="playersList">Loading players...</div>
-</div>
+  <div class="header-bar">
+    <div class="header-title">PLAYER DEPOSITS DIRECTORY</div>
+  </div>
+
+  <div class="players-grid" id="playersContainer">
+    <div style="grid-column: span 3; text-align:center; color:#777;">Loading players...</div>
+  </div>
+
+  <!-- FULL VIEW MODAL FOR PLAYER DEPOSITS -->
+  <div id="modalOverlay" onclick="closeModal()">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="modalPlayerName">Player Deposits</h3>
+        <button class="close-btn" onclick="closeModal()">Close</button>
+      </div>
+      <div class="date-tabs-grid" id="dateTabsContainer">
+        <!-- Dynamically filled date tabs -->
+      </div>
+    </div>
+  </div>
+
+  <!-- TIMESTAMP POPUP -->
+  <div id="timestampModal" onclick="closeTimestampModal()">
+    <div class="timestamp-card" onclick="event.stopPropagation()">
+      <div id="popTime" class="time-val">12:30:00</div>
+      <div id="popDate" class="date-val">27 Oct 2026</div>
+      <button class="timestamp-close" onclick="closeTimestampModal()">OK</button>
+    </div>
+  </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
-    authDomain: "tose-ccf8f.firebaseapp.com",
-    databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "tose-ccf8f",
-    storageBucket: "tose-ccf8f.appspot.com"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
+  authDomain: "tose-ccf8f.firebaseapp.com",
+  databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "tose-ccf8f"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const playersList = document.getElementById("playersList");
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-  async function loadAdminData() {
-    const usersSnap = await get(ref(db, "users"));
-    const txSnap = await get(ref(db, "transactions"));
+const container = document.getElementById("playersContainer");
+const modalOverlay = document.getElementById("modalOverlay");
+const modalPlayerName = document.getElementById("modalPlayerName");
+const dateTabsContainer = document.getElementById("dateTabsContainer");
+const timestampModal = document.getElementById("timestampModal");
+const popTime = document.getElementById("popTime");
+const popDate = document.getElementById("popDate");
 
-    const users = usersSnap.val() || {};
-    const transactions = txSnap.val() || {};
+async function loadData() {
+  try {
+    const [usersSnapshot, txSnapshot] = await Promise.all([
+      get(ref(db, "users")),
+      get(ref(db, "transactions"))
+    ]);
 
-    const uidsWithTx = Object.keys(transactions);
+    const usersMap = {};
+    if (usersSnapshot.exists()) {
+      usersSnapshot.forEach((child) => {
+        const val = child.val();
+        usersMap[val.uid] = val;
+      });
+    }
 
-    if (uidsWithTx.length === 0) {
-      playersList.innerHTML = `<div style="text-align:center; padding: 20px; color: #88aacc;">No player credit transactions found.</div>`;
+    const txMap = {};
+    if (txSnapshot.exists()) {
+      txSnapshot.forEach((child) => {
+        const uid = child.key;
+        const txs = [];
+        child.forEach((txChild) => {
+          txs.push(txChild.val());
+        });
+        txMap[uid] = txs;
+      });
+    }
+
+    // Combine and sort players in ascending order by name
+    const playersList = Object.values(usersMap);
+    playersList.sort((a, b) => {
+      const nameA = `${a.name || ""} ${a.surname || ""}`.toLowerCase();
+      const nameB = `${b.name || ""} ${b.surname || ""}`.toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+
+    if (playersList.length === 0) {
+      container.innerHTML = "<div style='grid-column: span 3; text-align:center; color:orange;'>No registered players found.</div>";
       return;
     }
 
-    playersList.innerHTML = "";
-
-    uidsWithTx.forEach(uid => {
-      const user = users[uid] || {};
-      const firstName = user.name || "Unknown";
-      const lastName = user.surname || "Player";
-      const idNumber = user.idNumber || user.id || uid;
-
-      const userTxObj = transactions[uid] || {};
-      const userTxList = Object.values(userTxObj).sort((a, b) => new Date(b.requestTime) - new Date(a.requestTime));
-
-      const card = document.createElement("div");
-      card.className = "player-card";
-
-      card.innerHTML = `
-        <div class="player-header" onclick="togglePlayer('${uid}')">
-          <div class="player-info">
-            <span>👤 ${firstName} ${lastName}</span>
-            <span class="id-tag">ID: ${idNumber}</span>
-          </div>
-          <div class="toggle-icon" id="icon-${uid}">▼</div>
-        </div>
-        <div class="details-panel" id="panel-${uid}">
-          <table>
-            <thead>
-              <tr>
-                <th colspan="2">REQUEST</th>
-                <th>GRANTED</th>
-                <th>STATUS</th>
-              </tr>
-              <tr>
-                <th>Amount</th>
-                <th>Date & Time</th>
-                <th>Date & Time</th>
-                <th>State</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${userTxList.map(tx => `
-                <tr>
-                  <td style="color: #00f0ff; font-weight:bold;">R ${(Number(tx.amount) || 0).toFixed(2)}</td>
-                  <td>${tx.requestTime ? new Date(tx.requestTime).toLocaleString() : 'N/A'}</td>
-                  <td>${tx.grantedTime ? new Date(tx.grantedTime).toLocaleString() : 'N/A'}</td>
-                  <td style="color: #a8ffbf;">${tx.status || 'GRANTED'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
+    container.innerHTML = "";
+    playersList.forEach((player) => {
+      const tile = document.createElement("div");
+      tile.className = "player-tile";
+      tile.innerHTML = `
+        <span class="label">Name & Surname</span>
+        <span class="name-value">${player.name || ''} ${player.surname || ''}</span>
+        <span class="label" style="margin-top:4px;">ID Number</span>
+        <span class="id-value">${player.idNumber || 'N/A'}</span>
       `;
 
-      playersList.appendChild(card);
+      const playerTxs = txMap[player.uid] || [];
+      tile.onclick = () => openPlayerModal(player, playerTxs);
+      container.appendChild(tile);
     });
+
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = "<div style='grid-column: span 3; text-align:center; color:red;'>Failed to load player data.</div>";
+  }
+}
+
+function openPlayerModal(player, transactions) {
+  modalPlayerName.innerText = `${player.name || ''} ${player.surname || ''} - Deposits`;
+  dateTabsContainer.innerHTML = "";
+
+  if (!transactions || transactions.length === 0) {
+    dateTabsContainer.innerHTML = "<div style='grid-column: span 2; text-align:center; color:#777; padding:20px;'>No deposits recorded for this player.</div>";
+    modalOverlay.style.display = "flex";
+    return;
   }
 
-  window.togglePlayer = function(uid) {
-    const panel = document.getElementById(`panel-${uid}`);
-    const icon = document.getElementById(`icon-${uid}`);
-    if (panel.classList.contains("open")) {
-      panel.classList.remove("open");
-      icon.textContent = "▼";
-    } else {
-      panel.classList.add("open");
-      icon.textContent = "▲";
-    }
-  };
+  // Group transactions by date string
+  const groupedByDate = {};
+  transactions.forEach((tx) => {
+    const timestamp = tx.grantedTime || tx.requestTime || Date.now();
+    const dateObj = new Date(timestamp);
+    const dateKey = dateObj.toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' }); // e.g. 27 Oct 2026
 
-  loadAdminData();
+    if (!groupedByDate[dateKey]) {
+      groupedByDate[dateKey] = {
+        dateString: dateKey,
+        totalSum: 0,
+        items: []
+      };
+    }
+
+    const amount = Number(tx.amount) || 0;
+    groupedByDate[dateKey].totalSum += amount;
+    groupedByDate[dateKey].items.push({
+      amount: amount,
+      timeString: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      dateString: dateKey
+    });
+  });
+
+  const sortedDates = Object.values(groupedByDate);
+
+  sortedDates.forEach((group) => {
+    const tab = document.createElement("div");
+    tab.className = "date-tab";
+
+    let iconsHtml = "";
+    group.items.forEach((item) => {
+      iconsHtml += `<button class="amount-icon" onclick='showTimestampPopup("${item.dateString}", "${item.timeString}")'>R${item.amount}</button>`;
+    });
+
+    tab.innerHTML = `
+      <div class="date-tab-header">${group.dateString}</div>
+      <div class="amounts-container">
+        ${iconsHtml}
+      </div>
+      <div class="daily-total">Total Deposited: R${group.totalSum.toFixed(2)}</div>
+    `;
+
+    dateTabsContainer.appendChild(tab);
+  });
+
+  modalOverlay.style.display = "flex";
+}
+
+window.showTimestampPopup = function(dateStr, timeStr) {
+  popDate.innerText = dateStr;
+  popTime.innerText = timeStr;
+  timestampModal.style.display = "flex";
+};
+
+window.closeTimestampModal = function() {
+  timestampModal.style.display = "none";
+};
+
+window.closeModal = function() {
+  modalOverlay.style.display = "none";
+};
+
+loadData();
 </script>
 
 </body>
