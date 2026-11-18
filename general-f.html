@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - Cash Out Requests</title>
+
+<style>
+body {
+  margin: 0;
+  background: #001220;
+  font-family: Arial, sans-serif;
+  color: white;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #00f0ff;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 25px;
+}
+
+#cashoutGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  #cashoutGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cashout-card {
+  background: #002244;
+  border: 1px solid #004080;
+  border-radius: 10px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+}
+
+.card-amount {
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffcc00;
+  text-align: center;
+}
+
+.card-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffffff;
+  text-align: center;
+}
+
+.card-time {
+  font-size: 12px;
+  color: #99ccff;
+  text-align: center;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 10px;
+}
+
+/* FILE PICKER ICON */
+.file-upload-label {
+  cursor: pointer;
+  font-size: 24px;
+  background: #003366;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #0055a5;
+  transition: background 0.2s;
+}
+.file-upload-label:hover {
+  background: #004080;
+}
+.file-input {
+  display: none;
+}
+
+.file-status {
+  font-size: 10px;
+  color: #a8ffbf;
+  margin-top: 2px;
+  text-align: center;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* GRANT BUTTON */
+.grant-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+.grant-btn:hover {
+  background: #218838;
+}
+.grant-btn:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.empty-msg {
+  grid-column: span 3;
+  text-align: center;
+  color: #888;
+  font-size: 16px;
+  padding: 30px;
+}
+</style>
+</head>
+<body>
+
+  <h1>Admin Cash Out Management</h1>
+  <div id="cashoutGrid">
+    <div class="empty-msg">Loading cash out requests...</div>
+  </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, onValue, update, push } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBqJTLjxhZBCsvjrTH_cG0fkXlElG6BqTg",
+  authDomain: "tose-ccf8f.firebaseapp.com",
+  databaseURL: "https://tose-ccf8f-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "tose-ccf8f",
+  storageBucket: "tose-ccf8f.appspot.com"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const storage = getStorage(app);
+
+const grid = document.getElementById("cashoutGrid");
+// Local map to track selected files per request ID
+const selectedFiles = {};
+
+onValue(ref(db, "adminCashouts"), (snapshot) => {
+  grid.innerHTML = "";
+  if (!snapshot.exists()) {
+    grid.innerHTML = '<div class="empty-msg">No cash out requests found.</div>';
+    return;
+  }
+
+  const requests = [];
+  snapshot.forEach((childSnap) => {
+    requests.push({
+      id: childSnap.key,
+      ...childSnap.val()
+    });
+  });
+
+  // Sort newest first
+  requests.sort((a, b) => b.timestamp - a.timestamp);
+
+  requests.forEach((req) => {
+    const card = document.createElement("div");
+    card.className = "cashout-card";
+
+    const dateStr = new Date(req.timestamp).toLocaleString();
+    const formattedAmount = Number(req.amount || 0).toFixed(2);
+    const isGranted = req.status === "GRANTED";
+
+    card.innerHTML = `
+      <div>
+        <div class="card-amount">R ${formattedAmount}</div>
+        <div class="card-name">${req.name || "Unknown Player"}</div>
+        <div class="card-time">${dateStr}</div>
+      </div>
+      <div style="font-size:11px; text-align:center; color: ${isGranted ? '#a8ffbf' : '#ffcc00'}; font-weight: bold;">
+        Status: ${req.status || 'PENDING'}
+      </div>
+      <div class="card-actions">
+        <div>
+          <label class="file-upload-label" title="Select Proof Picture">
+            🖼️
+            <input type="file" class="file-input" accept="image/*" data-id="${req.id}" onchange="handleFileSelect(event, '${req.id}')">
+          </label>
+          <div class="file-status" id="fileStatus_${req.id}">No file</div>
+        </div>
+        <button class="grant-btn" id="grantBtn_${req.id}" ${isGranted ? 'disabled' : ''} onclick="grantCashOut(event, '${req.id}', '${req.uid}', '${req.name}', ${req.amount})">
+          ${isGranted ? 'GRANTED' : 'GRANT'}
+        </button>
+      </div>
+    `;
+
+    grid.appendChild(card);
+  });
+});
+
+window.handleFileSelect = function(event, reqId) {
+  const file = event.target.files[0];
+  if (file) {
+    selectedFiles[reqId] = file;
+    document.getElementById(`fileStatus_${reqId}`).textContent = file.name;
+  }
+};
+
+window.grantCashOut = async function(event, reqId, playerUid, playerName, amount) {
+  const file = selectedFiles[reqId];
+  if (!file) {
+    alert("Please select a picture/proof before granting this cash out.");
+    return;
+  }
+
+  const btn = document.getElementById(`grantBtn_${reqId}`);
+  btn.disabled = true;
+  btn.textContent = "GRANTING...";
+
+  try {
+    // 1. Upload picture to Firebase Storage
+    const sRef = storageRef(storage, `cashout_proofs/${reqId}_${file.name}`);
+    const uploadResult = await uploadBytes(sRef, file);
+    const downloadUrl = await getDownloadURL(uploadResult.ref);
+
+    // 2. Format the custom success message required
+    const successMessage = `Congratulations ${playerName} Your Winnings of R ${Number(amount).toFixed(2)} Hope To see You Soon Again, Have a lovely One. Proof: ${downloadUrl}`;
+
+    // 3. Push the message to player's notifications feed
+    await push(ref(db, `notifications/${playerUid}`), {
+      message: successMessage,
+      timestamp: Date.now(),
+      read: false
+    });
+
+    // 4. Update status in adminCashouts
+    await update(ref(db, `adminCashouts/${reqId}`), {
+      status: "GRANTED",
+      proofUrl: downloadUrl,
+      grantedAt: Date.now()
+    });
+
+    alert("Cash out granted successfully and notification sent to player!");
+
+  } catch (error) {
+    console.error("Grant error:", error);
+    alert("Failed to grant cash out: " + error.message);
+    btn.disabled = false;
+    btn.textContent = "GRANT";
+  }
+};
+</script>
+
+</body>
+</html>
