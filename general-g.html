@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin - Hints</title>
+<title>Admin - Hints (21 Fields)</title>
 
 <style>
 * {
@@ -30,7 +30,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto 28px auto;
 }
 
@@ -44,35 +44,35 @@ h1 {
   background: #002244;
   border: 1px solid #004080;
   border-radius: 10px;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .hint-col label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: bold;
   color: #99ccff;
 }
 
 .hint-input {
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   border-radius: 6px;
   border: 1px solid #0055a5;
   background: #001020;
   color: #ffffff;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .submit-btn {
   width: 100%;
-  padding: 11px;
+  padding: 9px;
   background: #28a745;
   color: #ffffff;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: bold;
   border: none;
   border-radius: 6px;
@@ -80,6 +80,7 @@ h1 {
   text-transform: uppercase;
   letter-spacing: 1px;
   transition: background 0.2s;
+  margin-bottom: 6px;
 }
 
 .submit-btn:hover:not(:disabled) {
@@ -92,7 +93,7 @@ h1 {
 }
 
 #statusMsg {
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto 20px auto;
   text-align: center;
   font-size: 14px;
@@ -101,7 +102,7 @@ h1 {
 }
 
 #savedListSection {
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
@@ -146,23 +147,9 @@ h1 {
   <h1>Admin Hints</h1>
 
   <div id="columnsGrid">
-    <div class="hint-col">
-      <label for="hintInput1">Hint Field 1</label>
-      <input type="text" id="hintInput1" class="hint-input" placeholder="Write hint here...">
-      <button type="button" class="submit-btn" onclick="submitHint(1, this)">SUBMIT</button>
-    </div>
-
-    <div class="hint-col">
-      <label for="hintInput2">Hint Field 2</label>
-      <input type="text" id="hintInput2" class="hint-input" placeholder="Write hint here...">
-      <button type="button" class="submit-btn" onclick="submitHint(2, this)">SUBMIT</button>
-    </div>
-
-    <div class="hint-col">
-      <label for="hintInput3">Hint Field 3</label>
-      <input type="text" id="hintInput3" class="hint-input" placeholder="Write hint here...">
-      <button type="button" class="submit-btn" onclick="submitHint(3, this)">SUBMIT</button>
-    </div>
+    <div class="hint-col" id="col1"></div>
+    <div class="hint-col" id="col2"></div>
+    <div class="hint-col" id="col3"></div>
   </div>
 
   <div id="statusMsg"></div>
@@ -192,8 +179,38 @@ const db = getDatabase(app);
 const statusMsg = document.getElementById("statusMsg");
 const savedHintsContainer = document.getElementById("savedHintsContainer");
 
-window.submitHint = async function (colNumber, btnEl) {
-  const inputEl = document.getElementById(`hintInput${colNumber}`);
+// Build 21 fields across 3 columns (1-7 in col1, 8-14 in col2, 15-21 in col3)
+function buildFields() {
+  for (let i = 1; i <= 21; i++) {
+    const colIndex = i <= 7 ? 1 : (i <= 14 ? 2 : 3);
+    const colEl = document.getElementById(`col${colIndex}`);
+
+    const label = document.createElement("label");
+    label.htmlFor = `hintInput${i}`;
+    label.textContent = `Hint Field ${i}`;
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.id = `hintInput${i}`;
+    input.className = "hint-input";
+    input.placeholder = `Write hint ${i} here...`;
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "submit-btn";
+    btn.textContent = "SUBMIT";
+    btn.onclick = () => submitHint(i, btn);
+
+    colEl.appendChild(label);
+    colEl.appendChild(input);
+    colEl.appendChild(btn);
+  }
+}
+
+buildFields();
+
+window.submitHint = async function (fieldNumber, btnEl) {
+  const inputEl = document.getElementById(`hintInput${fieldNumber}`);
   const text = inputEl.value.trim();
 
   if (!text) {
@@ -207,12 +224,12 @@ window.submitHint = async function (colNumber, btnEl) {
   try {
     await push(ref(db, "hints"), {
       text: text,
-      slot: colNumber,
+      field: fieldNumber,
       timestamp: Date.now()
     });
 
     inputEl.value = "";
-    statusMsg.textContent = `Hint submitted: "${text}"`;
+    statusMsg.textContent = `Field ${fieldNumber} submitted: "${text}"`;
   } catch (err) {
     console.error("Error saving hint:", err);
     alert("Failed to submit hint: " + err.message);
